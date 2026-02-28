@@ -20,6 +20,7 @@ export function collectCommandSecretAssignmentsFromSnapshot(params: {
   resolvedConfig: OpenClawConfig;
   commandName: string;
   targetIds: ReadonlySet<string>;
+  inactiveRefPaths?: ReadonlySet<string>;
 }): ResolveAssignmentsFromSnapshotResult {
   const defaults = params.sourceConfig.secrets?.defaults;
   const assignments: CommandSecretAssignment[] = [];
@@ -38,6 +39,12 @@ export function collectCommandSecretAssignmentsFromSnapshot(params: {
 
     const resolved = getPath(params.resolvedConfig, target.pathSegments);
     if (!isExpectedResolvedSecretValue(resolved, target.entry.expectedResolvedValue)) {
+      if (params.inactiveRefPaths?.has(target.path)) {
+        diagnostics.push(
+          `${target.path}: secret ref is configured on an inactive surface; skipping command-time assignment.`,
+        );
+        continue;
+      }
       throw new Error(
         `${params.commandName}: ${target.path} is unresolved in the active runtime snapshot.`,
       );

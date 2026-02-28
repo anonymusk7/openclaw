@@ -50,4 +50,42 @@ describe("collectCommandSecretAssignmentsFromSnapshot", () => {
       }),
     ).toThrow(/memory search: talk\.apiKey is unresolved in the active runtime snapshot/);
   });
+
+  it("skips unresolved refs that are marked inactive by runtime warnings", () => {
+    const sourceConfig = {
+      agents: {
+        defaults: {
+          memorySearch: {
+            remote: {
+              apiKey: { source: "env", provider: "default", id: "DEFAULT_MEMORY_KEY" },
+            },
+          },
+        },
+      },
+    } as OpenClawConfig;
+    const resolvedConfig = {
+      agents: {
+        defaults: {
+          memorySearch: {
+            remote: {
+              apiKey: { source: "env", provider: "default", id: "DEFAULT_MEMORY_KEY" },
+            },
+          },
+        },
+      },
+    } as OpenClawConfig;
+
+    const result = collectCommandSecretAssignmentsFromSnapshot({
+      sourceConfig,
+      resolvedConfig,
+      commandName: "memory search",
+      targetIds: new Set(["agents.defaults.memorySearch.remote.apiKey"]),
+      inactiveRefPaths: new Set(["agents.defaults.memorySearch.remote.apiKey"]),
+    });
+
+    expect(result.assignments).toEqual([]);
+    expect(result.diagnostics).toEqual([
+      "agents.defaults.memorySearch.remote.apiKey: secret ref is configured on an inactive surface; skipping command-time assignment.",
+    ]);
+  });
 });

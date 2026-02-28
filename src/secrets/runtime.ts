@@ -133,11 +133,17 @@ export function resolveCommandSecretsFromActiveRuntimeSnapshot(params: {
   if (params.targetIds.size === 0) {
     return { assignments: [], diagnostics: [] };
   }
+  const inactiveRefPaths = new Set(
+    activeSnapshot.warnings
+      .filter((warning) => warning.code === "SECRETS_REF_IGNORED_INACTIVE_SURFACE")
+      .map((warning) => warning.path),
+  );
   return collectCommandSecretAssignmentsFromSnapshot({
     sourceConfig: activeSnapshot.sourceConfig,
     resolvedConfig: activeSnapshot.config,
     commandName: params.commandName,
     targetIds: params.targetIds,
+    inactiveRefPaths,
   });
 }
 
