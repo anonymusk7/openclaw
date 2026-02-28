@@ -435,12 +435,22 @@ function collectGoogleChatAssignments(params: {
 }): void {
   const googleChatRecord = params.googleChat as Record<string, unknown>;
   const surface = resolveChannelAccountSurface(googleChatRecord);
+  const topLevelServiceAccountActive = !surface.channelEnabled
+    ? false
+    : !surface.hasExplicitAccounts
+      ? true
+      : surface.accounts.some(
+          ({ account, enabled }) =>
+            enabled &&
+            !hasOwnProperty(account, "serviceAccount") &&
+            !hasOwnProperty(account, "serviceAccountRef"),
+        );
   collectGoogleChatAccountAssignment({
     target: params.googleChat,
     path: "channels.googlechat",
     defaults: params.defaults,
     context: params.context,
-    active: isBaseFieldActiveForChannelSurface(surface, "serviceAccount"),
+    active: topLevelServiceAccountActive,
     inactiveReason: "no enabled account inherits this top-level Google Chat serviceAccount.",
   });
   if (!surface.hasExplicitAccounts) {

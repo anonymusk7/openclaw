@@ -666,6 +666,49 @@ describe("secrets runtime snapshot", () => {
     );
   });
 
+  it("treats top-level Google Chat serviceAccount as inactive when enabled accounts use serviceAccountRef", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        channels: {
+          googlechat: {
+            serviceAccount: {
+              source: "env",
+              provider: "default",
+              id: "MISSING_GOOGLECHAT_BASE_SERVICE_ACCOUNT",
+            },
+            accounts: {
+              work: {
+                enabled: true,
+                serviceAccountRef: {
+                  source: "env",
+                  provider: "default",
+                  id: "GOOGLECHAT_WORK_SERVICE_ACCOUNT",
+                },
+              },
+            },
+          },
+        },
+      }),
+      env: {
+        GOOGLECHAT_WORK_SERVICE_ACCOUNT: "work-service-account-json",
+      },
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.channels?.googlechat?.serviceAccount).toEqual({
+      source: "env",
+      provider: "default",
+      id: "MISSING_GOOGLECHAT_BASE_SERVICE_ACCOUNT",
+    });
+    expect(snapshot.config.channels?.googlechat?.accounts?.work?.serviceAccount).toBe(
+      "work-service-account-json",
+    );
+    expect(snapshot.warnings.map((warning) => warning.path)).toContain(
+      "channels.googlechat.serviceAccount",
+    );
+  });
+
   it("handles Discord nested inheritance for enabled and disabled accounts", async () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
