@@ -61,7 +61,7 @@ Scan OpenClaw state for:
 
 - plaintext secret storage
 - unresolved refs
-- precedence drift (`auth-profiles` shadowing config refs)
+- precedence drift (`auth-profiles.json` credentials shadowing `openclaw.json` refs)
 - legacy residues (legacy auth store entries, OAuth reminders)
 
 ```bash
@@ -109,14 +109,14 @@ Flags:
 
 - `--providers-only`: configure `secrets.providers` only, skip credential mapping.
 - `--skip-provider-setup`: skip provider setup and map credentials to existing providers.
-- `--agent <id>`: scope auth-profile target discovery and writes to one agent store.
+- `--agent <id>`: scope `auth-profiles.json` target discovery and writes to one agent store.
 
 Notes:
 
 - Requires an interactive TTY.
 - You cannot combine `--providers-only` with `--skip-provider-setup`.
 - `configure` targets secret-bearing fields in `openclaw.json` plus `auth-profiles.json` for the selected agent scope.
-- `configure` supports creating new auth profile mappings directly in the picker flow.
+- `configure` supports creating new `auth-profiles.json` mappings directly in the picker flow.
 - Canonical supported surface: [SecretRef Credential Surface](/reference/secretref-credential-surface).
 - It performs preflight resolution before apply.
 - Generated plans default to scrub options (`scrubEnv`, `scrubAuthProfilesForProviderTargets`, `scrubLegacyAuthJson` all enabled).

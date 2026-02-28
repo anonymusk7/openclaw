@@ -1,5 +1,5 @@
 ---
-summary: "Contract for `secrets apply` plans: target validation, path matching, and auth-profile target scope"
+summary: "Contract for `secrets apply` plans: target validation, path matching, and `auth-profiles.json` target scope"
 read_when:
   - Generating or reviewing `openclaw secrets apply` plans
   - Debugging `Invalid plan target path` errors
@@ -83,8 +83,8 @@ No writes are committed for an invalid plan.
 
 ## Runtime and audit scope notes
 
-- Ref-only auth profiles (`keyRef`/`tokenRef`) are included in runtime resolution and audit coverage.
-- `secrets apply` writes supported configuration targets, supported auth-profile targets, and optional scrub targets.
+- Ref-only `auth-profiles.json` entries (`keyRef`/`tokenRef`) are included in runtime resolution and audit coverage.
+- `secrets apply` writes supported `openclaw.json` targets, supported `auth-profiles.json` targets, and optional scrub targets.
 
 ## Operator checks
 

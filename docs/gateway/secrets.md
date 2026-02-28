@@ -1,7 +1,7 @@
 ---
 summary: "Secrets management: SecretRef contract, runtime snapshot behavior, and safe one-way scrubbing"
 read_when:
-  - Configuring SecretRefs for provider credentials and auth profile refs
+  - Configuring SecretRefs for provider credentials and `auth-profiles.json` refs
   - Operating secrets reload, audit, configure, and apply safely in production
   - Understanding startup fail-fast, inactive-surface filtering, and last-known-good behavior
 title: "Secrets Management"
@@ -273,7 +273,7 @@ Runtime-minted or rotating credentials and OAuth refresh material are intentiona
 Warning and audit signals:
 
 - `SECRETS_REF_OVERRIDES_PLAINTEXT` (runtime warning)
-- `REF_SHADOWED` (audit finding when auth profile credentials take precedence over config refs)
+- `REF_SHADOWED` (audit finding when `auth-profiles.json` credentials take precedence over `openclaw.json` refs)
 
 Google Chat compatibility behavior:
 
@@ -336,7 +336,7 @@ Findings include:
 
 - plaintext values at rest (`openclaw.json`, `auth-profiles.json`, `.env`)
 - unresolved refs
-- precedence shadowing (`auth-profiles` taking priority over config refs)
+- precedence shadowing (`auth-profiles.json` taking priority over `openclaw.json` refs)
 - legacy residues (`auth.json`, OAuth reminders)
 
 ### `secrets configure`
@@ -345,7 +345,7 @@ Interactive helper that:
 
 - configures `secrets.providers` first (`env`/`file`/`exec`, add/edit/remove)
 - lets you select supported secret-bearing fields in `openclaw.json` plus `auth-profiles.json` for one agent scope
-- can create a new auth profile mapping directly in the target picker
+- can create a new `auth-profiles.json` mapping directly in the target picker
 - captures SecretRef details (`source`, `provider`, `id`)
 - runs preflight resolution
 - can apply immediately
@@ -367,8 +367,8 @@ Helpful modes:
 Apply a saved plan:
 
 ```bash
-openclaw secrets apply --from /tmp/openclaw-secrets-plan
-openclaw secrets apply --from /tmp/openclaw-secrets-plan --dry-run
+openclaw secrets apply --from /tmp/openclaw-secrets-plan.json
+openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --dry-run
 ```
 
 For strict target/path contract details and exact rejection rules, see:

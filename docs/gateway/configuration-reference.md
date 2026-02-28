@@ -1170,8 +1170,8 @@ Optional **Docker sandboxing** for the embedded agent. See [Sandboxing](/gateway
 
 **`docker.binds`** mounts additional host directories; global and per-agent binds are merged.
 
-**Sandboxed browser** (`sandbox.browser.enabled`): Chromium + CDP in a container. noVNC URL injected into system prompt. Does not require `browser.enabled` in main config.
-noVNC observer access uses VNC auth by default and OpenClaw emits a short-lived token URL that serves a local bootstrap page; noVNC password is passed via URL fragment (instead of URL query).
+**Sandboxed browser** (`sandbox.browser.enabled`): Chromium + CDP in a container. noVNC URL injected into system prompt. Does not require `browser.enabled` in `openclaw.json`.
+noVNC observer access uses VNC auth by default and OpenClaw emits a short-lived token URL (instead of exposing the password in the shared URL).
 
 - `allowHostControl: false` (default) blocks sandboxed sessions from targeting the host browser.
 - `network` defaults to `openclaw-sandbox-browser` (dedicated bridge network). Set to `bridge` only when you explicitly want global bridge connectivity.
@@ -1805,7 +1805,7 @@ Configures inbound media understanding (image/audio/video):
 
 - `provider`: API provider id (`openai`, `anthropic`, `google`/`gemini`, `groq`, etc.)
 - `model`: model id override
-- `profile` / `preferredProfile`: auth profile selection
+- `profile` / `preferredProfile`: `auth-profiles.json` profile selection
 
 **CLI entry** (`type: "cli"`):
 
@@ -1818,7 +1818,7 @@ Configures inbound media understanding (image/audio/video):
 - `prompt`, `maxChars`, `maxBytes`, `timeoutSeconds`, `language`: per-entry overrides.
 - Failures fall back to the next entry.
 
-Provider auth follows standard order: auth profiles → env vars → `models.providers.*.apiKey`.
+Provider auth follows standard order: `auth-profiles.json` → env vars → `models.providers.*.apiKey`.
 
 </Accordion>
 
@@ -2700,8 +2700,8 @@ Notes:
 }
 ```
 
-- Per-agent auth profiles stored at `<agentDir>/auth-profiles.json`.
-- Auth profiles support value-level refs (`keyRef` for `api_key`, `tokenRef` for `token`).
+- Per-agent profiles are stored at `<agentDir>/auth-profiles.json`.
+- `auth-profiles.json` supports value-level refs (`keyRef` for `api_key`, `tokenRef` for `token`).
 - Static runtime credentials come from in-memory resolved snapshots; legacy static `auth.json` entries are scrubbed when discovered.
 - Legacy OAuth imports from `~/.openclaw/credentials/oauth.json`.
 - See [OAuth](/concepts/oauth).
@@ -2878,7 +2878,7 @@ Split config into multiple files:
 - Array of files: deep-merged in order (later overrides earlier).
 - Sibling keys: merged after includes (override included values).
 - Nested includes: up to 10 levels deep.
-- Paths: resolved relative to the including file, but must stay inside the top-level config directory (`dirname` of the main config file). Absolute/`../` forms are allowed only when they still resolve inside that boundary.
+- Paths: resolved relative to the including file, but must stay inside the top-level config directory (`dirname` of `openclaw.json`). Absolute/`../` forms are allowed only when they still resolve inside that boundary.
 - Errors: clear messages for missing files, parse errors, and circular includes.
 
 ---
