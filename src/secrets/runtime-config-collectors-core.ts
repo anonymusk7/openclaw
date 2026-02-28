@@ -1,4 +1,5 @@
 import type { OpenClawConfig } from "../config/config.js";
+import { hasConfiguredSecretInput } from "../config/types.secrets.js";
 import { collectTtsApiKeyAssignments } from "./runtime-config-collectors-tts.js";
 import {
   collectSecretInputAssignment,
@@ -207,14 +208,28 @@ function collectGatewayAssignments(params: {
   }
   if (isRecord(gateway.remote)) {
     const remote = gateway.remote;
+    const localTokenConfigured = hasConfiguredSecretInput(gateway.auth?.token, params.defaults);
+    const localPasswordConfigured = hasConfiguredSecretInput(
+      gateway.auth?.password,
+      params.defaults,
+    );
+    const remoteMode = gateway.mode === "remote";
+    const remoteUrlConfigured = typeof remote.url === "string" && remote.url.trim().length > 0;
+    const remoteEnabled = remote.enabled !== false;
+    const remoteTokenActive =
+      remoteEnabled && (remoteMode || remoteUrlConfigured || !localTokenConfigured);
+    const remotePasswordActive =
+      remoteEnabled && (remoteMode || remoteUrlConfigured || !localPasswordConfigured);
     collectSecretInputAssignment({
       value: remote.token,
       path: "gateway.remote.token",
       expected: "string",
       defaults: params.defaults,
       context: params.context,
-      active: remote.enabled !== false,
-      inactiveReason: "gateway.remote is disabled.",
+      active: remoteTokenActive,
+      inactiveReason: !remoteEnabled
+        ? "gateway.remote is disabled."
+        : "gateway.remote.token is inactive because local gateway auth token is configured.",
       apply: (value) => {
         remote.token = value;
       },
@@ -225,8 +240,10 @@ function collectGatewayAssignments(params: {
       expected: "string",
       defaults: params.defaults,
       context: params.context,
-      active: remote.enabled !== false,
-      inactiveReason: "gateway.remote is disabled.",
+      active: remotePasswordActive,
+      inactiveReason: !remoteEnabled
+        ? "gateway.remote is disabled."
+        : "gateway.remote.password is inactive because local gateway auth password is configured.",
       apply: (value) => {
         remote.password = value;
       },

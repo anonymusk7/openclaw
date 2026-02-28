@@ -489,6 +489,43 @@ describe("secrets runtime snapshot", () => {
     );
   });
 
+  it("treats gateway.remote refs as inactive when local auth credentials are configured", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        gateway: {
+          mode: "local",
+          auth: {
+            mode: "password",
+            token: "local-token",
+            password: "local-password",
+          },
+          remote: {
+            enabled: true,
+            token: { source: "env", provider: "default", id: "MISSING_REMOTE_TOKEN" },
+            password: { source: "env", provider: "default", id: "MISSING_REMOTE_PASSWORD" },
+          },
+        },
+      }),
+      env: {},
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.gateway?.remote?.token).toEqual({
+      source: "env",
+      provider: "default",
+      id: "MISSING_REMOTE_TOKEN",
+    });
+    expect(snapshot.config.gateway?.remote?.password).toEqual({
+      source: "env",
+      provider: "default",
+      id: "MISSING_REMOTE_PASSWORD",
+    });
+    expect(snapshot.warnings.map((warning) => warning.path)).toEqual(
+      expect.arrayContaining(["gateway.remote.token", "gateway.remote.password"]),
+    );
+  });
+
   it("fails when enabled channel surfaces contain unresolved refs", async () => {
     await expect(
       prepareSecretsRuntimeSnapshot({
