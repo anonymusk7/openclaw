@@ -194,6 +194,7 @@ export function applyTalkApiKey(config: OpenClawConfig): OpenClawConfig {
 
   const nextTalk = {
     ...talk,
+    apiKey: resolved,
     provider: talk?.provider ?? providerId,
     providers,
   };
