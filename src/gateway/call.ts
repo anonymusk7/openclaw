@@ -242,6 +242,16 @@ function trimToUndefined(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function readGatewayTokenEnv(env: NodeJS.ProcessEnv): string | undefined {
+  return trimToUndefined(env.OPENCLAW_GATEWAY_TOKEN) ?? trimToUndefined(env.CLAWDBOT_GATEWAY_TOKEN);
+}
+
+function readGatewayPasswordEnv(env: NodeJS.ProcessEnv): string | undefined {
+  return (
+    trimToUndefined(env.OPENCLAW_GATEWAY_PASSWORD) ?? trimToUndefined(env.CLAWDBOT_GATEWAY_PASSWORD)
+  );
+}
+
 function resolveGatewayCallTimeout(timeoutValue: unknown): {
   timeoutMs: number;
   safeTimerTimeoutMs: number;
@@ -323,6 +333,8 @@ async function resolveGatewayCredentials(context: ResolvedGatewayCallContext): P
   password?: string;
 }> {
   let resolvedConfig = context.config;
+  const envToken = readGatewayTokenEnv(process.env);
+  const envPassword = readGatewayPasswordEnv(process.env);
   const auth = context.config.gateway?.auth;
   if (
     auth &&
@@ -336,6 +348,29 @@ async function resolveGatewayCredentials(context: ResolvedGatewayCallContext): P
     });
     if (resolvedConfig.gateway?.auth) {
       resolvedConfig.gateway.auth.password = resolvedPassword;
+    }
+  }
+  const remote = resolvedConfig.gateway?.remote;
+  const defaults = resolvedConfig.secrets?.defaults;
+  if (remote) {
+    const localToken = trimToUndefined(resolvedConfig.gateway?.auth?.token);
+    const localPassword = trimToUndefined(resolvedConfig.gateway?.auth?.password);
+    const needsRemoteToken = !envToken && !localToken;
+    const needsRemotePassword = !envPassword && !localPassword;
+
+    if (needsRemoteToken && resolveSecretInputRef({ value: remote.token, defaults }).ref) {
+      remote.token = await resolveGatewaySecretInputString({
+        config: resolvedConfig,
+        value: remote.token,
+        path: "gateway.remote.token",
+      });
+    }
+    if (needsRemotePassword && resolveSecretInputRef({ value: remote.password, defaults }).ref) {
+      remote.password = await resolveGatewaySecretInputString({
+        config: resolvedConfig,
+        value: remote.password,
+        path: "gateway.remote.password",
+      });
     }
   }
   return resolveGatewayCredentialsFromConfig({

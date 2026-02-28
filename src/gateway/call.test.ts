@@ -593,11 +593,15 @@ describe("callGateway password resolution", () => {
       "OPENCLAW_GATEWAY_PASSWORD",
       "OPENCLAW_GATEWAY_TOKEN",
       "LOCAL_REF_PASSWORD",
+      "REMOTE_REF_TOKEN",
+      "REMOTE_REF_PASSWORD",
     ]);
     resetGatewayCallMocks();
     delete process.env.OPENCLAW_GATEWAY_PASSWORD;
     delete process.env.OPENCLAW_GATEWAY_TOKEN;
     delete process.env.LOCAL_REF_PASSWORD;
+    delete process.env.REMOTE_REF_TOKEN;
+    delete process.env.REMOTE_REF_PASSWORD;
     setGatewayNetworkDefaults(18789);
   });
 
@@ -674,6 +678,54 @@ describe("callGateway password resolution", () => {
     await callGateway({ method: "health" });
 
     expect(lastClientOptions?.password).toBe("resolved-local-ref-password");
+  });
+
+  it("resolves gateway.remote.token SecretInput refs when remote token is required", async () => {
+    process.env.REMOTE_REF_TOKEN = "resolved-remote-ref-token";
+    loadConfig.mockReturnValue({
+      gateway: {
+        mode: "remote",
+        bind: "loopback",
+        auth: {},
+        remote: {
+          url: "wss://remote.example:18789",
+          token: { source: "env", provider: "default", id: "REMOTE_REF_TOKEN" },
+        },
+      },
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+    } as unknown as OpenClawConfig);
+
+    await callGateway({ method: "health" });
+
+    expect(lastClientOptions?.token).toBe("resolved-remote-ref-token");
+  });
+
+  it("resolves gateway.remote.password SecretInput refs when remote password is required", async () => {
+    process.env.REMOTE_REF_PASSWORD = "resolved-remote-ref-password";
+    loadConfig.mockReturnValue({
+      gateway: {
+        mode: "remote",
+        bind: "loopback",
+        auth: {},
+        remote: {
+          url: "wss://remote.example:18789",
+          password: { source: "env", provider: "default", id: "REMOTE_REF_PASSWORD" },
+        },
+      },
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+    } as unknown as OpenClawConfig);
+
+    await callGateway({ method: "health" });
+
+    expect(lastClientOptions?.password).toBe("resolved-remote-ref-password");
   });
 
   it.each(explicitAuthCases)("uses explicit $label when url override is set", async (testCase) => {
