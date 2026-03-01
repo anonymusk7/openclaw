@@ -1076,21 +1076,25 @@ public struct SecretsResolveResult: Codable, Sendable {
     public let ok: Bool?
     public let assignments: [SecretsResolveAssignment]?
     public let diagnostics: [String]?
+    public let inactiverefpaths: [String]?
 
     public init(
         ok: Bool?,
         assignments: [SecretsResolveAssignment]?,
-        diagnostics: [String]?)
+        diagnostics: [String]?,
+        inactiverefpaths: [String]?)
     {
         self.ok = ok
         self.assignments = assignments
         self.diagnostics = diagnostics
+        self.inactiverefpaths = inactiverefpaths
     }
 
     private enum CodingKeys: String, CodingKey {
         case ok
         case assignments
         case diagnostics
+        case inactiverefpaths = "inactiveRefPaths"
     }
 }
 
