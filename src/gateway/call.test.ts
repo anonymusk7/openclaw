@@ -703,6 +703,29 @@ describe("callGateway password resolution", () => {
     expect(lastClientOptions?.password).toBe("from-env");
   });
 
+  it("does not resolve local password ref when token auth can win", async () => {
+    loadConfig.mockReturnValue({
+      gateway: {
+        mode: "local",
+        bind: "loopback",
+        auth: {
+          mode: "token",
+          token: "token-auth",
+          password: { source: "env", provider: "default", id: "MISSING_LOCAL_REF_PASSWORD" },
+        },
+      },
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+    } as unknown as OpenClawConfig);
+
+    await callGateway({ method: "health" });
+
+    expect(lastClientOptions?.token).toBe("token-auth");
+  });
+
   it("does not resolve local password ref when remote password is already configured", async () => {
     loadConfig.mockReturnValue({
       gateway: {

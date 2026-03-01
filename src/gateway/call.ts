@@ -345,13 +345,23 @@ async function resolveGatewayCredentials(context: ResolvedGatewayCallContext): P
   const defaults = context.config.secrets?.defaults;
   const auth = context.config.gateway?.auth;
   const remoteConfig = context.config.gateway?.remote;
+  const authMode = auth?.mode;
+  const localToken = trimToUndefined(auth?.token);
+  const remoteToken = trimToUndefined(remoteConfig?.token);
+  const remoteTokenConfigured = hasConfiguredSecretInput(remoteConfig?.token, defaults);
+  const tokenCanWin = Boolean(envToken || localToken || remoteToken || remoteTokenConfigured);
   const remotePasswordConfigured =
     context.isRemoteMode && hasConfiguredSecretInput(remoteConfig?.password, defaults);
+  const localPasswordRef = resolveSecretInputRef({ value: auth?.password, defaults }).ref;
+  const localPasswordCanWinInLocalMode =
+    authMode === "password" ||
+    (authMode !== "token" && authMode !== "none" && authMode !== "trusted-proxy" && !tokenCanWin);
+  const localPasswordCanWinInRemoteMode = !remotePasswordConfigured && !tokenCanWin;
   const shouldResolveLocalPassword =
     Boolean(auth) &&
     !envPassword &&
-    (!context.isRemoteMode || !remotePasswordConfigured) &&
-    Boolean(resolveSecretInputRef({ value: auth?.password, defaults }).ref);
+    Boolean(localPasswordRef) &&
+    (context.isRemoteMode ? localPasswordCanWinInRemoteMode : localPasswordCanWinInLocalMode);
   if (shouldResolveLocalPassword) {
     resolvedConfig = structuredClone(context.config);
     const resolvedPassword = await resolveGatewaySecretInputString({
