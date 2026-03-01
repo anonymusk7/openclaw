@@ -342,8 +342,9 @@ function collectDiscordAssignments(params: {
       expected: "string",
       defaults: params.defaults,
       context: params.context,
-      active: isBaseFieldActiveForChannelSurface(surface, "pluralkit"),
-      inactiveReason: "no enabled account inherits this top-level Discord pluralkit config.",
+      active: isBaseFieldActiveForChannelSurface(surface, "pluralkit") && isEnabledFlag(pluralkit),
+      inactiveReason:
+        "no enabled Discord surface inherits this top-level PluralKit config or PluralKit is disabled.",
       apply: (value) => {
         pluralkit.token = value;
       },
@@ -371,8 +372,8 @@ function collectDiscordAssignments(params: {
         expected: "string",
         defaults: params.defaults,
         context: params.context,
-        active: enabled,
-        inactiveReason: "Discord account is disabled.",
+        active: enabled && isEnabledFlag(pluralkit),
+        inactiveReason: "Discord account is disabled or PluralKit is disabled for this account.",
         apply: (value) => {
           pluralkit.token = value;
         },

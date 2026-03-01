@@ -840,6 +840,37 @@ describe("secrets runtime snapshot", () => {
     );
   });
 
+  it("treats Discord PluralKit token refs as inactive when PluralKit is disabled", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        channels: {
+          discord: {
+            pluralkit: {
+              enabled: false,
+              token: {
+                source: "env",
+                provider: "default",
+                id: "MISSING_DISCORD_PLURALKIT_TOKEN",
+              },
+            },
+          },
+        },
+      }),
+      env: {},
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.channels?.discord?.pluralkit?.token).toEqual({
+      source: "env",
+      provider: "default",
+      id: "MISSING_DISCORD_PLURALKIT_TOKEN",
+    });
+    expect(snapshot.warnings.map((warning) => warning.path)).toContain(
+      "channels.discord.pluralkit.token",
+    );
+  });
+
   it("handles Discord nested inheritance for enabled and disabled accounts", async () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
