@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { fetchWithSsrFGuard } from "openclaw/plugin-sdk";
 import type { RuntimeEnv } from "openclaw/plugin-sdk";
 import type { ResolvedNextcloudTalkAccount } from "./accounts.js";
 import { normalizeSecretInputString } from "./secret-input.js";
@@ -91,31 +92,40 @@ export async function resolveNextcloudTalkRoomKind(params: {
   const auth = Buffer.from(`${apiUser}:${apiPassword}`, "utf-8").toString("base64");
 
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "OCS-APIRequest": "true",
-        Accept: "application/json",
+    const { response, release } = await fetchWithSsrFGuard({
+      url,
+      init: {
+        method: "GET",
+        headers: {
+          Authorization: `Basic ${auth}`,
+          "OCS-APIRequest": "true",
+          Accept: "application/json",
+        },
       },
+      auditContext: "nextcloud-talk.room-info",
     });
+    try {
+      if (!response.ok) {
+        roomCache.set(key, {
+          fetchedAt: Date.now(),
+          error: `status:${response.status}`,
+        });
+        runtime?.log?.(
+          `nextcloud-talk: room lookup failed (${response.status}) token=${roomToken}`,
+        );
+        return undefined;
+      }
 
-    if (!response.ok) {
-      roomCache.set(key, {
-        fetchedAt: Date.now(),
-        error: `status:${response.status}`,
-      });
-      runtime?.log?.(`nextcloud-talk: room lookup failed (${response.status}) token=${roomToken}`);
-      return undefined;
+      const payload = (await response.json()) as {
+        ocs?: { data?: { type?: number | string } };
+      };
+      const type = coerceRoomType(payload.ocs?.data?.type);
+      const kind = resolveRoomKindFromType(type);
+      roomCache.set(key, { fetchedAt: Date.now(), kind });
+      return kind;
+    } finally {
+      await release();
     }
-
-    const payload = (await response.json()) as {
-      ocs?: { data?: { type?: number | string } };
-    };
-    const type = coerceRoomType(payload.ocs?.data?.type);
-    const kind = resolveRoomKindFromType(type);
-    roomCache.set(key, { fetchedAt: Date.now(), kind });
-    return kind;
   } catch (err) {
     roomCache.set(key, {
       fetchedAt: Date.now(),

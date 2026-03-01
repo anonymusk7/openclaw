@@ -1,3 +1,4 @@
+import { fetchWithSsrFGuard } from "openclaw/plugin-sdk";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "openclaw/plugin-sdk/account-id";
 import { getMatrixRuntime } from "../../runtime.js";
 import { normalizeSecretInputString } from "../../secret-input.js";
@@ -169,28 +170,36 @@ export async function resolveMatrixAuth(params?: {
     );
   }
 
-  // Login with password using HTTP API
-  const loginResponse = await fetch(`${resolved.homeserver}/_matrix/client/v3/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      type: "m.login.password",
-      identifier: { type: "m.id.user", user: resolved.userId },
-      password: resolved.password,
-      initial_device_display_name: resolved.deviceName ?? "OpenClaw Gateway",
-    }),
+  // Login with password using HTTP API.
+  const { response: loginResponse, release: releaseLoginResponse } = await fetchWithSsrFGuard({
+    url: `${resolved.homeserver}/_matrix/client/v3/login`,
+    init: {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "m.login.password",
+        identifier: { type: "m.id.user", user: resolved.userId },
+        password: resolved.password,
+        initial_device_display_name: resolved.deviceName ?? "OpenClaw Gateway",
+      }),
+    },
+    auditContext: "matrix.login",
   });
-
-  if (!loginResponse.ok) {
-    const errorText = await loginResponse.text();
-    throw new Error(`Matrix login failed: ${errorText}`);
-  }
-
-  const login = (await loginResponse.json()) as {
-    access_token?: string;
-    user_id?: string;
-    device_id?: string;
-  };
+  const login = await (async () => {
+    try {
+      if (!loginResponse.ok) {
+        const errorText = await loginResponse.text();
+        throw new Error(`Matrix login failed: ${errorText}`);
+      }
+      return (await loginResponse.json()) as {
+        access_token?: string;
+        user_id?: string;
+        device_id?: string;
+      };
+    } finally {
+      await releaseLoginResponse();
+    }
+  })();
 
   const accessToken = login.access_token?.trim();
   if (!accessToken) {
