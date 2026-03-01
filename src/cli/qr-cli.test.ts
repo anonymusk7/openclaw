@@ -135,6 +135,32 @@ describe("registerQrCli", () => {
     expect(runtime.log).toHaveBeenCalledWith(expected);
   });
 
+  it("skips local password SecretRef resolution when --token override is provided", async () => {
+    loadConfig.mockReturnValue({
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+      gateway: {
+        bind: "custom",
+        customBindHost: "gateway.local",
+        auth: {
+          mode: "password",
+          password: { source: "env", provider: "default", id: "MISSING_LOCAL_GATEWAY_PASSWORD" },
+        },
+      },
+    });
+
+    await runQr(["--setup-code-only", "--token", "override-token"]);
+
+    const expected = encodePairingSetupCode({
+      url: "ws://gateway.local:18789",
+      token: "override-token",
+    });
+    expect(runtime.log).toHaveBeenCalledWith(expected);
+  });
+
   it("resolves local gateway auth password SecretRefs before setup code generation", async () => {
     vi.stubEnv("QR_LOCAL_GATEWAY_PASSWORD", "local-password-secret");
     loadConfig.mockReturnValue({

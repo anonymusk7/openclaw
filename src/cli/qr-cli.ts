@@ -119,10 +119,12 @@ export function registerQrCli(program: Command) {
         if (token) {
           cfg.gateway.auth.mode = "token";
           cfg.gateway.auth.token = token;
+          cfg.gateway.auth.password = undefined;
         }
         if (password) {
           cfg.gateway.auth.mode = "password";
           cfg.gateway.auth.password = password;
+          cfg.gateway.auth.token = undefined;
         }
         if (wantsRemote && !token && !password) {
           const remoteToken =
@@ -152,7 +154,7 @@ export function registerQrCli(program: Command) {
             );
           }
         }
-        if (!wantsRemote && !password) {
+        if (!wantsRemote && !password && !token) {
           await resolveLocalGatewayPasswordSecretIfNeeded(cfg);
         }
 
