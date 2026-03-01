@@ -18,7 +18,7 @@ import {
   resolveBlueBubblesAccount,
   resolveDefaultBlueBubblesAccountId,
 } from "./accounts.js";
-import { normalizeSecretInputString } from "./secret-input.js";
+import { hasConfiguredSecretInput, normalizeSecretInputString } from "./secret-input.js";
 import { parseBlueBubblesAllowTarget } from "./targets.js";
 import { normalizeBlueBubblesServerUrl } from "./types.js";
 
@@ -223,8 +223,11 @@ export const blueBubblesOnboardingAdapter: ChannelOnboardingAdapter = {
     }
 
     // Prompt for password
-    let password = normalizeSecretInputString(resolvedAccount.config.password);
-    if (!password) {
+    const existingPassword = resolvedAccount.config.password;
+    const existingPasswordText = normalizeSecretInputString(existingPassword);
+    const hasConfiguredPassword = hasConfiguredSecretInput(existingPassword);
+    let password: unknown = existingPasswordText;
+    if (!hasConfiguredPassword) {
       await prompter.note(
         [
           "Enter the BlueBubbles server password.",
@@ -248,6 +251,8 @@ export const blueBubblesOnboardingAdapter: ChannelOnboardingAdapter = {
           validate: (value) => (String(value ?? "").trim() ? undefined : "Required"),
         });
         password = String(entered).trim();
+      } else if (!existingPasswordText) {
+        password = existingPassword;
       }
     }
 
