@@ -56,7 +56,9 @@ describe("secrets runtime snapshot", () => {
         },
       },
       gateway: {
+        mode: "remote",
         remote: {
+          url: "wss://gateway.example",
           token: { source: "env", provider: "default", id: "REMOTE_GATEWAY_TOKEN" },
           password: { source: "env", provider: "default", id: "REMOTE_GATEWAY_PASSWORD" },
         },
@@ -574,6 +576,39 @@ describe("secrets runtime snapshot", () => {
             token: "local-token",
             password: "local-password",
           },
+          remote: {
+            enabled: true,
+            token: { source: "env", provider: "default", id: "MISSING_REMOTE_TOKEN" },
+            password: { source: "env", provider: "default", id: "MISSING_REMOTE_PASSWORD" },
+          },
+        },
+      }),
+      env: {},
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.gateway?.remote?.token).toEqual({
+      source: "env",
+      provider: "default",
+      id: "MISSING_REMOTE_TOKEN",
+    });
+    expect(snapshot.config.gateway?.remote?.password).toEqual({
+      source: "env",
+      provider: "default",
+      id: "MISSING_REMOTE_PASSWORD",
+    });
+    expect(snapshot.warnings.map((warning) => warning.path)).toEqual(
+      expect.arrayContaining(["gateway.remote.token", "gateway.remote.password"]),
+    );
+  });
+
+  it("treats gateway.remote refs as inactive in local mode without remote url", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        gateway: {
+          mode: "local",
+          auth: {},
           remote: {
             enabled: true,
             token: { source: "env", provider: "default", id: "MISSING_REMOTE_TOKEN" },
