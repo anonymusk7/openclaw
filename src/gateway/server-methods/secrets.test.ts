@@ -23,6 +23,7 @@ describe("secrets handlers", () => {
     resolveSecrets?: (params: { commandName: string; targetIds: string[] }) => Promise<{
       assignments: Array<{ path: string; pathSegments: string[]; value: unknown }>;
       diagnostics: string[];
+      inactiveRefPaths: string[];
     }>;
   }) {
     const reloadSecrets = overrides?.reloadSecrets ?? (async () => ({ warningCount: 0 }));
@@ -31,6 +32,7 @@ describe("secrets handlers", () => {
       (async () => ({
         assignments: [],
         diagnostics: [],
+        inactiveRefPaths: [],
       }));
     return createSecretsHandlers({
       reloadSecrets,
@@ -67,6 +69,7 @@ describe("secrets handlers", () => {
     const resolveSecrets = vi.fn().mockResolvedValue({
       assignments: [{ path: "talk.apiKey", pathSegments: ["talk", "apiKey"], value: "sk" }],
       diagnostics: ["note"],
+      inactiveRefPaths: ["talk.apiKey"],
     });
     const handlers = createHandlers({ resolveSecrets });
     const respond = vi.fn();
@@ -86,6 +89,7 @@ describe("secrets handlers", () => {
       ok: true,
       assignments: [{ path: "talk.apiKey", pathSegments: ["talk", "apiKey"], value: "sk" }],
       diagnostics: ["note"],
+      inactiveRefPaths: ["talk.apiKey"],
     });
   });
 
@@ -159,6 +163,7 @@ describe("secrets handlers", () => {
     const resolveSecrets = vi.fn().mockResolvedValue({
       assignments: [{ path: "talk.apiKey", pathSegments: [""], value: "sk" }],
       diagnostics: [],
+      inactiveRefPaths: [],
     });
     const handlers = createHandlers({ resolveSecrets });
     const respond = vi.fn();

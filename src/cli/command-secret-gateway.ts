@@ -21,6 +21,7 @@ type GatewaySecretsResolveResult = {
     value: unknown;
   }>;
   diagnostics?: string[];
+  inactiveRefPaths?: string[];
 };
 
 function isConfiguredSecretRefTarget(params: {
@@ -44,6 +45,7 @@ function isConfiguredSecretRefTarget(params: {
 function parseGatewaySecretsResolveResult(payload: unknown): {
   assignments: Array<{ path?: string; pathSegments: string[]; value: unknown }>;
   diagnostics: string[];
+  inactiveRefPaths: string[];
 } {
   if (!validateSecretsResolveResult(payload)) {
     throw new Error("gateway returned invalid secrets.resolve payload.");
@@ -52,6 +54,7 @@ function parseGatewaySecretsResolveResult(payload: unknown): {
   return {
     assignments: parsed.assignments ?? [],
     diagnostics: (parsed.diagnostics ?? []).filter((entry) => entry.trim().length > 0),
+    inactiveRefPaths: (parsed.inactiveRefPaths ?? []).filter((entry) => entry.trim().length > 0),
   };
 }
 
@@ -134,7 +137,10 @@ export async function resolveCommandSecretRefsViaGateway(params: {
       );
     }
   }
-  const inactiveRefPaths = collectInactiveSurfacePathsFromDiagnostics(parsed.diagnostics);
+  const inactiveRefPaths =
+    parsed.inactiveRefPaths.length > 0
+      ? new Set(parsed.inactiveRefPaths)
+      : collectInactiveSurfacePathsFromDiagnostics(parsed.diagnostics);
   collectCommandSecretAssignmentsFromSnapshot({
     sourceConfig: params.config,
     resolvedConfig,

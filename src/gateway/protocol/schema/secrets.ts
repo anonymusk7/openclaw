@@ -27,6 +27,7 @@ export const SecretsResolveResultSchema = Type.Object(
     ok: Type.Optional(Type.Boolean()),
     assignments: Type.Optional(Type.Array(SecretsResolveAssignmentSchema)),
     diagnostics: Type.Optional(Type.Array(NonEmptyString)),
+    inactiveRefPaths: Type.Optional(Type.Array(NonEmptyString)),
   },
   { additionalProperties: false },
 );

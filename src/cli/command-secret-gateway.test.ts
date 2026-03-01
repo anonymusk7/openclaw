@@ -176,4 +176,29 @@ describe("resolveCommandSecretRefsViaGateway", () => {
       "talk.apiKey: secret ref is configured on an inactive surface; skipping command-time assignment.",
     ]);
   });
+
+  it("uses inactiveRefPaths from structured response without parsing diagnostic text", async () => {
+    callGateway.mockResolvedValueOnce({
+      assignments: [],
+      diagnostics: ["talk api key inactive"],
+      inactiveRefPaths: ["talk.apiKey"],
+    });
+
+    const result = await resolveCommandSecretRefsViaGateway({
+      config: {
+        talk: {
+          apiKey: { source: "env", provider: "default", id: "TALK_API_KEY" },
+        },
+      } as OpenClawConfig,
+      commandName: "memory status",
+      targetIds: new Set(["talk.apiKey"]),
+    });
+
+    expect(result.resolvedConfig.talk?.apiKey).toEqual({
+      source: "env",
+      provider: "default",
+      id: "TALK_API_KEY",
+    });
+    expect(result.diagnostics).toEqual(["talk api key inactive"]);
+  });
 });

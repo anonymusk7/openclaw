@@ -32,6 +32,7 @@ export function createSecretsHandlers(params: {
       value: unknown;
     }>;
     diagnostics: string[];
+    inactiveRefPaths: string[];
   }>;
 }): GatewayRequestHandlers {
   return {
@@ -89,6 +90,7 @@ export function createSecretsHandlers(params: {
           ok: true,
           assignments: result.assignments,
           diagnostics: result.diagnostics,
+          inactiveRefPaths: result.inactiveRefPaths,
         };
         if (!validateSecretsResolveResult(payload)) {
           throw new Error("secrets.resolve returned invalid payload.");
