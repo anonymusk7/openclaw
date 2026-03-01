@@ -18,29 +18,24 @@ export async function resolveOnboardingSecretInputString(params: {
   defaults?: SecretDefaults;
   env?: NodeJS.ProcessEnv;
 }): Promise<string | undefined> {
-  const inline = normalizeSecretInputString(params.value);
-  if (inline) {
-    return inline;
-  }
-
   const defaults = params.defaults ?? params.config.secrets?.defaults;
   const { ref } = resolveSecretInputRef({
     value: params.value,
     defaults,
   });
-  if (!ref) {
-    return undefined;
+  if (ref) {
+    try {
+      return await resolveSecretRefString(ref, {
+        config: params.config,
+        env: params.env ?? process.env,
+      });
+    } catch (error) {
+      throw new Error(
+        `${params.path}: failed to resolve SecretRef "${ref.source}:${ref.provider}:${ref.id}": ${formatSecretResolutionError(error)}`,
+        { cause: error },
+      );
+    }
   }
 
-  try {
-    return await resolveSecretRefString(ref, {
-      config: params.config,
-      env: params.env ?? process.env,
-    });
-  } catch (error) {
-    throw new Error(
-      `${params.path}: failed to resolve SecretRef "${ref.source}:${ref.provider}:${ref.id}": ${formatSecretResolutionError(error)}`,
-      { cause: error },
-    );
-  }
+  return normalizeSecretInputString(params.value);
 }
