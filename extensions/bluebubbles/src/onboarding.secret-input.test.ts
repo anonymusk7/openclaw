@@ -14,6 +14,9 @@ vi.mock("openclaw/plugin-sdk", () => ({
 describe("bluebubbles onboarding SecretInput", () => {
   it("preserves existing password SecretRef when user keeps current credential", async () => {
     const { blueBubblesOnboardingAdapter } = await import("./onboarding.js");
+    type ConfigureContext = Parameters<
+      NonNullable<typeof blueBubblesOnboardingAdapter.configure>
+    >[0];
     const passwordRef = { source: "env", provider: "default", id: "BLUEBUBBLES_PASSWORD" };
     const confirm = vi
       .fn()
@@ -29,7 +32,7 @@ describe("bluebubbles onboarding SecretInput", () => {
       note,
     } as unknown as WizardPrompter;
 
-    const result = await blueBubblesOnboardingAdapter.configure({
+    const context = {
       cfg: {
         channels: {
           bluebubbles: {
@@ -40,9 +43,13 @@ describe("bluebubbles onboarding SecretInput", () => {
         },
       },
       prompter,
+      runtime: { ...console, exit: vi.fn() } as ConfigureContext["runtime"],
+      forceAllowFrom: false,
       accountOverrides: {},
       shouldPromptAccountIds: false,
-    });
+    } satisfies ConfigureContext;
+
+    const result = await blueBubblesOnboardingAdapter.configure(context);
 
     expect(result.cfg.channels?.bluebubbles?.password).toEqual(passwordRef);
     expect(text).not.toHaveBeenCalled();

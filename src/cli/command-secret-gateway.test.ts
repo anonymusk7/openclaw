@@ -213,6 +213,7 @@ describe("resolveCommandSecretRefsViaGateway", () => {
       agents: {
         list: [
           {
+            id: "main",
             memorySearch: {
               remote: {
                 apiKey: { source: "env", provider: "default", id: "MISSING_MEMORY_API_KEY" },
@@ -221,7 +222,7 @@ describe("resolveCommandSecretRefsViaGateway", () => {
           },
         ],
       },
-    } as OpenClawConfig;
+    } as unknown as OpenClawConfig;
 
     const result = await resolveCommandSecretRefsViaGateway({
       config,

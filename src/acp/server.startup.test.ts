@@ -10,16 +10,19 @@ type GatewayClientAuth = {
   token?: string;
   password?: string;
 };
+type ResolveGatewayCredentialsWithSecretInputs = (params: unknown) => Promise<GatewayClientAuth>;
 
 const mockState = {
   gateways: [] as MockGatewayClient[],
   gatewayAuth: [] as GatewayClientAuth[],
   agentSideConnectionCtor: vi.fn(),
   agentStart: vi.fn(),
-  resolveGatewayCredentialsWithSecretInputs: vi.fn(async () => ({
-    token: undefined,
-    password: undefined,
-  })),
+  resolveGatewayCredentialsWithSecretInputs: vi.fn<ResolveGatewayCredentialsWithSecretInputs>(
+    async (_params) => ({
+      token: undefined,
+      password: undefined,
+    }),
+  ),
 };
 
 class MockGatewayClient {
