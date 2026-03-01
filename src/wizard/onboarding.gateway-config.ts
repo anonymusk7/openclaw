@@ -9,7 +9,7 @@ import {
 } from "../commands/onboard-helpers.js";
 import type { GatewayAuthChoice } from "../commands/onboard-types.js";
 import type { GatewayBindMode, GatewayTailscaleMode, OpenClawConfig } from "../config/config.js";
-import { ensureControlUiAllowedOriginsForNonLoopbackBind } from "../config/gateway-control-ui-origins.js";
+import type { SecretInput } from "../config/types.secrets.js";
 import {
   maybeAddTailnetOriginToControlUiAllowedOrigins,
   TAILSCALE_DOCS_LINES,
@@ -170,7 +170,7 @@ export async function configureGatewayForOnboarding(
   }
 
   if (authMode === "password") {
-    let password: unknown =
+    let password: SecretInput | undefined =
       flow === "quickstart" && quickstartGateway.password ? quickstartGateway.password : undefined;
     if (!password) {
       const selectedMode = await resolveSecretInputModeForEnvSelection({
@@ -209,8 +209,7 @@ export async function configureGatewayForOnboarding(
         auth: {
           ...nextConfig.gateway?.auth,
           mode: "password",
-          password:
-            typeof password === "string" ? String(password ?? "").trim() : (password as string),
+          password,
         },
       },
     };

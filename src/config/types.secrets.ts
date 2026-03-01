@@ -99,10 +99,18 @@ export function coerceSecretRef(value: unknown, defaults?: SecretDefaults): Secr
 }
 
 export function hasConfiguredSecretInput(value: unknown, defaults?: SecretDefaults): boolean {
-  if (typeof value === "string") {
-    return value.trim().length > 0;
+  if (normalizeSecretInputString(value)) {
+    return true;
   }
   return coerceSecretRef(value, defaults) !== null;
+}
+
+export function normalizeSecretInputString(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 export function resolveSecretInputRef(params: {

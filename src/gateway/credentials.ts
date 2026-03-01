@@ -72,8 +72,8 @@ function readGatewayPasswordEnv(
 }
 
 export function resolveGatewayCredentialsFromValues(params: {
-  configToken?: string;
-  configPassword?: string;
+  configToken?: unknown;
+  configPassword?: unknown;
   env?: NodeJS.ProcessEnv;
   includeLegacyEnv?: boolean;
   tokenPrecedence?: GatewayCredentialPrecedence;

@@ -1,5 +1,6 @@
 import os from "node:os";
 import type { OpenClawConfig } from "../config/types.js";
+import { normalizeSecretInputString } from "../config/types.secrets.js";
 import { resolveGatewayBindUrl } from "../shared/gateway-bind-url.js";
 import { isCarrierGradeNatIpv4Address, isRfc1918Ipv4Address } from "../shared/net/ip.js";
 import { resolveTailnetHostWithRunner } from "../shared/tailscale-status.js";
@@ -172,7 +173,7 @@ function resolveAuth(cfg: OpenClawConfig, env: NodeJS.ProcessEnv): ResolveAuthRe
   const password =
     env.OPENCLAW_GATEWAY_PASSWORD?.trim() ||
     env.CLAWDBOT_GATEWAY_PASSWORD?.trim() ||
-    cfg.gateway?.auth?.password?.trim();
+    normalizeSecretInputString(cfg.gateway?.auth?.password);
 
   if (mode === "password") {
     if (!password) {

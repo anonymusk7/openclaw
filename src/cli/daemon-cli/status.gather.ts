@@ -5,6 +5,7 @@ import {
   resolveStateDir,
 } from "../../config/config.js";
 import type { GatewayBindMode, GatewayControlUiConfig } from "../../config/types.js";
+import { normalizeSecretInputString } from "../../config/types.secrets.js";
 import { readLastGatewayErrorLine } from "../../daemon/diagnostics.js";
 import type { FindExtraGatewayServicesOptions } from "../../daemon/inspect.js";
 import { findExtraGatewayServices } from "../../daemon/inspect.js";
@@ -227,7 +228,7 @@ export async function gatherDaemonStatus(
         password:
           opts.rpc.password ||
           mergedDaemonEnv.OPENCLAW_GATEWAY_PASSWORD ||
-          daemonCfg.gateway?.auth?.password,
+          normalizeSecretInputString(daemonCfg.gateway?.auth?.password),
         tlsFingerprint:
           shouldUseLocalTlsRuntime && tlsRuntime?.enabled
             ? tlsRuntime.fingerprintSha256

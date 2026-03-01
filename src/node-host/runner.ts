@@ -1,5 +1,6 @@
 import { resolveBrowserConfig } from "../browser/config.js";
 import { loadConfig } from "../config/config.js";
+import { normalizeSecretInputString } from "../config/types.secrets.js";
 import { GatewayClient } from "../gateway/client.js";
 import { loadOrCreateDeviceIdentity } from "../infra/device-identity.js";
 import type { SkillBinTrustEntry } from "../infra/exec-approvals.js";
@@ -134,10 +135,14 @@ export async function runNodeHost(opts: NodeHostRunOptions): Promise<void> {
   const isRemoteMode = cfg.gateway?.mode === "remote";
   const token =
     process.env.OPENCLAW_GATEWAY_TOKEN?.trim() ||
-    (isRemoteMode ? cfg.gateway?.remote?.token : cfg.gateway?.auth?.token);
+    normalizeSecretInputString(
+      isRemoteMode ? cfg.gateway?.remote?.token : cfg.gateway?.auth?.token,
+    );
   const password =
     process.env.OPENCLAW_GATEWAY_PASSWORD?.trim() ||
-    (isRemoteMode ? cfg.gateway?.remote?.password : cfg.gateway?.auth?.password);
+    normalizeSecretInputString(
+      isRemoteMode ? cfg.gateway?.remote?.password : cfg.gateway?.auth?.password,
+    );
 
   const host = gateway.host ?? "127.0.0.1";
   const port = gateway.port ?? 18789;
@@ -149,8 +154,8 @@ export async function runNodeHost(opts: NodeHostRunOptions): Promise<void> {
 
   const client = new GatewayClient({
     url,
-    token: token?.trim() || undefined,
-    password: password?.trim() || undefined,
+    token: token || undefined,
+    password: password || undefined,
     instanceId: nodeId,
     clientName: GATEWAY_CLIENT_NAMES.NODE_HOST,
     clientDisplayName: displayName,

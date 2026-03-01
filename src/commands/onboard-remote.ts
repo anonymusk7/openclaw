@@ -1,4 +1,5 @@
 import type { OpenClawConfig } from "../config/config.js";
+import type { SecretInput } from "../config/types.secrets.js";
 import { isSecureWebSocketUrl } from "../gateway/net.js";
 import type { GatewayBonjourBeacon } from "../infra/bonjour-discovery.js";
 import { discoverGatewayBeacons } from "../infra/bonjour-discovery.js";
@@ -161,8 +162,8 @@ export async function promptRemoteGatewayConfig(
     ],
   });
 
-  let token: unknown = cfg.gateway?.remote?.token;
-  let password: unknown = cfg.gateway?.remote?.password;
+  let token: SecretInput | undefined = cfg.gateway?.remote?.token;
+  let password: SecretInput | undefined = cfg.gateway?.remote?.password;
   if (authChoice === "token") {
     const selectedMode = await resolveSecretInputModeForEnvSelection({
       prompter,
@@ -239,8 +240,8 @@ export async function promptRemoteGatewayConfig(
       mode: "remote",
       remote: {
         url,
-        ...(token !== undefined ? { token: token as string } : {}),
-        ...(password !== undefined ? { password: password as string } : {}),
+        ...(token !== undefined ? { token } : {}),
+        ...(password !== undefined ? { password } : {}),
       },
     },
   };

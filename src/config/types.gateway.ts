@@ -139,7 +139,7 @@ export type GatewayAuthConfig = {
   /** Shared token for token mode (stored locally for CLI auth). */
   token?: string;
   /** Shared password for password mode (consider env instead). */
-  password?: string;
+  password?: SecretInput;
   /** Allow Tailscale identity headers when serve mode is enabled. */
   allowTailscale?: boolean;
   /** Rate-limit configuration for failed authentication attempts. */
@@ -177,9 +177,9 @@ export type GatewayRemoteConfig = {
   /** Transport for macOS remote connections (ssh tunnel or direct WS). */
   transport?: "ssh" | "direct";
   /** Token for remote auth (when the gateway requires token auth). */
-  token?: string;
+  token?: SecretInput;
   /** Password for remote auth (when the gateway requires password auth). */
-  password?: string;
+  password?: SecretInput;
   /** Expected TLS certificate fingerprint (sha256) for remote gateways. */
   tlsFingerprint?: string;
   /** SSH target for tunneling remote Gateway (user@host). */
