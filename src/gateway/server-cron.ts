@@ -38,6 +38,14 @@ export type GatewayCronState = {
 
 const CRON_WEBHOOK_TIMEOUT_MS = 10_000;
 
+function trimToOptionalString(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 function redactWebhookUrl(url: string): string {
   try {
     const parsed = new URL(url);
@@ -350,8 +358,8 @@ export function buildGatewayCronService(params: {
     onEvent: (evt) => {
       params.broadcast("cron", evt, { dropIfSlow: true });
       if (evt.action === "finished") {
-        const webhookToken = params.cfg.cron?.webhookToken?.trim();
-        const legacyWebhook = params.cfg.cron?.webhook?.trim();
+        const webhookToken = trimToOptionalString(params.cfg.cron?.webhookToken);
+        const legacyWebhook = trimToOptionalString(params.cfg.cron?.webhook);
         const job = cron.getJob(evt.jobId);
         const legacyNotify = (job as { notify?: unknown } | undefined)?.notify === true;
         const webhookTarget = resolveCronWebhookTarget({

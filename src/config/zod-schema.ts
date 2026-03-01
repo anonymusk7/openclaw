@@ -403,7 +403,7 @@ export const OpenClawSchema = z
           .strict()
           .optional(),
         webhook: HttpUrlSchema.optional(),
-        webhookToken: z.string().optional().register(sensitive),
+        webhookToken: SecretInputSchema.optional().register(sensitive),
         sessionRetention: z.union([z.string(), z.literal(false)]).optional(),
         runLog: z
           .object({
