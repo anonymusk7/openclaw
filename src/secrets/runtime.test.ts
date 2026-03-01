@@ -64,6 +64,7 @@ describe("secrets runtime snapshot", () => {
       channels: {
         telegram: {
           botToken: { source: "env", provider: "default", id: "TELEGRAM_BOT_TOKEN_REF" },
+          webhookUrl: "https://example.test/telegram-webhook",
           webhookSecret: { source: "env", provider: "default", id: "TELEGRAM_WEBHOOK_SECRET_REF" },
           accounts: {
             work: {
@@ -76,6 +77,7 @@ describe("secrets runtime snapshot", () => {
           },
         },
         slack: {
+          mode: "http",
           signingSecret: { source: "env", provider: "default", id: "SLACK_SIGNING_SECRET_REF" },
           accounts: {
             work: {
