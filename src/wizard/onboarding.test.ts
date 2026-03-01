@@ -461,4 +461,33 @@ describe("runOnboardingWizard", () => {
       }),
     );
   });
+
+  it("passes secretInputMode through to local gateway config step", async () => {
+    configureGatewayForOnboarding.mockClear();
+    const prompter = buildWizardPrompter({});
+    const runtime = createRuntime();
+
+    await runOnboardingWizard(
+      {
+        acceptRisk: true,
+        flow: "quickstart",
+        mode: "local",
+        authChoice: "skip",
+        installDaemon: false,
+        skipProviders: true,
+        skipSkills: true,
+        skipHealth: true,
+        skipUi: true,
+        secretInputMode: "ref",
+      },
+      runtime,
+      prompter,
+    );
+
+    expect(configureGatewayForOnboarding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        secretInputMode: "ref",
+      }),
+    );
+  });
 });
