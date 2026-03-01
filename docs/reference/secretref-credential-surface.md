@@ -65,7 +65,23 @@ Scope intent:
 - `channels.irc.accounts.*.nickserv.password`
 - `channels.bluebubbles.password`
 - `channels.bluebubbles.accounts.*.password`
+- `channels.feishu.appSecret`
+- `channels.feishu.verificationToken`
+- `channels.feishu.accounts.*.appSecret`
+- `channels.feishu.accounts.*.verificationToken`
 - `channels.msteams.appPassword`
+- `channels.mattermost.botToken`
+- `channels.mattermost.accounts.*.botToken`
+- `channels.matrix.password`
+- `channels.matrix.accounts.*.password`
+- `channels.nextcloud-talk.botSecret`
+- `channels.nextcloud-talk.apiPassword`
+- `channels.nextcloud-talk.accounts.*.botSecret`
+- `channels.nextcloud-talk.accounts.*.apiPassword`
+- `channels.zalo.botToken`
+- `channels.zalo.webhookSecret`
+- `channels.zalo.accounts.*.botToken`
+- `channels.zalo.accounts.*.webhookSecret`
 - `channels.googlechat.serviceAccount` via sibling `serviceAccountRef` (compatibility exception)
 - `channels.googlechat.accounts.*.serviceAccount` via sibling `serviceAccountRef` (compatibility exception)
 
@@ -89,6 +105,8 @@ Out-of-scope credentials include:
 
 - `gateway.auth.token` (coming soon)
 - `commands.ownerDisplaySecret`
+- `channels.matrix.accessToken`
+- `channels.matrix.accounts.*.accessToken`
 - `hooks.token`
 - `hooks.gmail.pushToken`
 - `hooks.mappings[].sessionKey`

@@ -75,6 +75,17 @@ function isBaseFieldActiveForChannelSurface(
   );
 }
 
+function normalizeSecretStringValue(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function hasConfiguredSecretInputValue(
+  value: unknown,
+  defaults: SecretDefaults | undefined,
+): boolean {
+  return normalizeSecretStringValue(value).length > 0 || coerceSecretRef(value, defaults) !== null;
+}
+
 function collectSimpleChannelFieldAssignments(params: {
   channelKey: string;
   field: string;
@@ -511,6 +522,389 @@ function collectMSTeamsAssignments(params: {
   });
 }
 
+function collectMattermostAssignments(params: {
+  config: OpenClawConfig;
+  defaults: SecretDefaults | undefined;
+  context: ResolverContext;
+}): void {
+  const channels = params.config.channels as Record<string, unknown> | undefined;
+  if (!isRecord(channels)) {
+    return;
+  }
+  const mattermost = channels.mattermost;
+  if (!isRecord(mattermost)) {
+    return;
+  }
+  const surface = resolveChannelAccountSurface(mattermost);
+  collectSimpleChannelFieldAssignments({
+    channelKey: "mattermost",
+    field: "botToken",
+    channel: mattermost,
+    surface,
+    defaults: params.defaults,
+    context: params.context,
+    topInactiveReason: "no enabled account inherits this top-level Mattermost botToken.",
+    accountInactiveReason: "Mattermost account is disabled.",
+  });
+}
+
+function collectMatrixAssignments(params: {
+  config: OpenClawConfig;
+  defaults: SecretDefaults | undefined;
+  context: ResolverContext;
+}): void {
+  const channels = params.config.channels as Record<string, unknown> | undefined;
+  if (!isRecord(channels)) {
+    return;
+  }
+  const matrix = channels.matrix;
+  if (!isRecord(matrix)) {
+    return;
+  }
+  const surface = resolveChannelAccountSurface(matrix);
+  const envAccessTokenConfigured =
+    normalizeSecretStringValue(params.context.env.MATRIX_ACCESS_TOKEN).length > 0;
+  const baseAccessTokenConfigured = hasConfiguredSecretInputValue(
+    matrix.accessToken,
+    params.defaults,
+  );
+  const topLevelPasswordActive = !surface.channelEnabled
+    ? false
+    : !surface.hasExplicitAccounts
+      ? !(baseAccessTokenConfigured || envAccessTokenConfigured)
+      : surface.accounts.some(
+          ({ account, enabled }) =>
+            enabled &&
+            !hasOwnProperty(account, "password") &&
+            !hasConfiguredSecretInputValue(account.accessToken, params.defaults) &&
+            !(baseAccessTokenConfigured || envAccessTokenConfigured),
+        );
+  collectSecretInputAssignment({
+    value: matrix.password,
+    path: "channels.matrix.password",
+    expected: "string",
+    defaults: params.defaults,
+    context: params.context,
+    active: topLevelPasswordActive,
+    inactiveReason:
+      "no enabled Matrix surface inherits this top-level password (an accessToken is configured).",
+    apply: (value) => {
+      matrix.password = value;
+    },
+  });
+  if (!surface.hasExplicitAccounts) {
+    return;
+  }
+  for (const { accountId, account, enabled } of surface.accounts) {
+    if (!hasOwnProperty(account, "password")) {
+      continue;
+    }
+    const accountAccessTokenConfigured = hasConfiguredSecretInputValue(
+      account.accessToken,
+      params.defaults,
+    );
+    const inheritedAccessTokenConfigured =
+      !hasOwnProperty(account, "accessToken") &&
+      (baseAccessTokenConfigured || envAccessTokenConfigured);
+    collectSecretInputAssignment({
+      value: account.password,
+      path: `channels.matrix.accounts.${accountId}.password`,
+      expected: "string",
+      defaults: params.defaults,
+      context: params.context,
+      active: enabled && !(accountAccessTokenConfigured || inheritedAccessTokenConfigured),
+      inactiveReason: "Matrix account is disabled or an accessToken is configured.",
+      apply: (value) => {
+        account.password = value;
+      },
+    });
+  }
+}
+
+function collectZaloAssignments(params: {
+  config: OpenClawConfig;
+  defaults: SecretDefaults | undefined;
+  context: ResolverContext;
+}): void {
+  const channels = params.config.channels as Record<string, unknown> | undefined;
+  if (!isRecord(channels)) {
+    return;
+  }
+  const zalo = channels.zalo;
+  if (!isRecord(zalo)) {
+    return;
+  }
+  const surface = resolveChannelAccountSurface(zalo);
+  const baseTokenFile = normalizeSecretStringValue(zalo.tokenFile);
+  const topLevelBotTokenActive = !surface.channelEnabled
+    ? false
+    : !surface.hasExplicitAccounts
+      ? baseTokenFile.length === 0
+      : surface.accounts.some(
+          ({ account, enabled }) =>
+            enabled &&
+            !hasOwnProperty(account, "botToken") &&
+            (!hasOwnProperty(account, "tokenFile") ||
+              normalizeSecretStringValue(account.tokenFile).length === 0) &&
+            baseTokenFile.length === 0,
+        );
+  collectSecretInputAssignment({
+    value: zalo.botToken,
+    path: "channels.zalo.botToken",
+    expected: "string",
+    defaults: params.defaults,
+    context: params.context,
+    active: topLevelBotTokenActive,
+    inactiveReason:
+      "no enabled Zalo surface inherits this top-level botToken (tokenFile is configured).",
+    apply: (value) => {
+      zalo.botToken = value;
+    },
+  });
+  const baseWebhookUrl = normalizeSecretStringValue(zalo.webhookUrl);
+  const topLevelWebhookSecretActive = !surface.channelEnabled
+    ? false
+    : !surface.hasExplicitAccounts
+      ? baseWebhookUrl.length > 0
+      : surface.accounts.some(({ account, enabled }) => {
+          if (!enabled || hasOwnProperty(account, "webhookSecret")) {
+            return false;
+          }
+          const accountWebhookUrl = hasOwnProperty(account, "webhookUrl")
+            ? normalizeSecretStringValue(account.webhookUrl)
+            : baseWebhookUrl;
+          return accountWebhookUrl.length > 0;
+        });
+  collectSecretInputAssignment({
+    value: zalo.webhookSecret,
+    path: "channels.zalo.webhookSecret",
+    expected: "string",
+    defaults: params.defaults,
+    context: params.context,
+    active: topLevelWebhookSecretActive,
+    inactiveReason:
+      "no enabled Zalo webhook surface inherits this top-level webhookSecret (webhook mode is not active).",
+    apply: (value) => {
+      zalo.webhookSecret = value;
+    },
+  });
+  if (!surface.hasExplicitAccounts) {
+    return;
+  }
+  for (const { accountId, account, enabled } of surface.accounts) {
+    if (hasOwnProperty(account, "botToken")) {
+      const accountTokenFile = normalizeSecretStringValue(account.tokenFile);
+      collectSecretInputAssignment({
+        value: account.botToken,
+        path: `channels.zalo.accounts.${accountId}.botToken`,
+        expected: "string",
+        defaults: params.defaults,
+        context: params.context,
+        active: enabled && accountTokenFile.length === 0,
+        inactiveReason: "Zalo account is disabled or tokenFile is configured.",
+        apply: (value) => {
+          account.botToken = value;
+        },
+      });
+    }
+    if (hasOwnProperty(account, "webhookSecret")) {
+      const accountWebhookUrl = hasOwnProperty(account, "webhookUrl")
+        ? normalizeSecretStringValue(account.webhookUrl)
+        : baseWebhookUrl;
+      collectSecretInputAssignment({
+        value: account.webhookSecret,
+        path: `channels.zalo.accounts.${accountId}.webhookSecret`,
+        expected: "string",
+        defaults: params.defaults,
+        context: params.context,
+        active: enabled && accountWebhookUrl.length > 0,
+        inactiveReason: "Zalo account is disabled or webhook mode is not active for this account.",
+        apply: (value) => {
+          account.webhookSecret = value;
+        },
+      });
+    }
+  }
+}
+
+function collectFeishuAssignments(params: {
+  config: OpenClawConfig;
+  defaults: SecretDefaults | undefined;
+  context: ResolverContext;
+}): void {
+  const channels = params.config.channels as Record<string, unknown> | undefined;
+  if (!isRecord(channels)) {
+    return;
+  }
+  const feishu = channels.feishu;
+  if (!isRecord(feishu)) {
+    return;
+  }
+  const surface = resolveChannelAccountSurface(feishu);
+  collectSimpleChannelFieldAssignments({
+    channelKey: "feishu",
+    field: "appSecret",
+    channel: feishu,
+    surface,
+    defaults: params.defaults,
+    context: params.context,
+    topInactiveReason: "no enabled account inherits this top-level Feishu appSecret.",
+    accountInactiveReason: "Feishu account is disabled.",
+  });
+  const baseConnectionMode =
+    normalizeSecretStringValue(feishu.connectionMode) === "webhook" ? "webhook" : "websocket";
+  const topLevelVerificationTokenActive = !surface.channelEnabled
+    ? false
+    : !surface.hasExplicitAccounts
+      ? baseConnectionMode === "webhook"
+      : surface.accounts.some(({ account, enabled }) => {
+          if (!enabled || hasOwnProperty(account, "verificationToken")) {
+            return false;
+          }
+          const accountMode = hasOwnProperty(account, "connectionMode")
+            ? normalizeSecretStringValue(account.connectionMode)
+            : baseConnectionMode;
+          return accountMode === "webhook";
+        });
+  collectSecretInputAssignment({
+    value: feishu.verificationToken,
+    path: "channels.feishu.verificationToken",
+    expected: "string",
+    defaults: params.defaults,
+    context: params.context,
+    active: topLevelVerificationTokenActive,
+    inactiveReason:
+      "no enabled Feishu webhook-mode surface inherits this top-level verificationToken.",
+    apply: (value) => {
+      feishu.verificationToken = value;
+    },
+  });
+  if (!surface.hasExplicitAccounts) {
+    return;
+  }
+  for (const { accountId, account, enabled } of surface.accounts) {
+    if (!hasOwnProperty(account, "verificationToken")) {
+      continue;
+    }
+    const accountMode = hasOwnProperty(account, "connectionMode")
+      ? normalizeSecretStringValue(account.connectionMode)
+      : baseConnectionMode;
+    collectSecretInputAssignment({
+      value: account.verificationToken,
+      path: `channels.feishu.accounts.${accountId}.verificationToken`,
+      expected: "string",
+      defaults: params.defaults,
+      context: params.context,
+      active: enabled && accountMode === "webhook",
+      inactiveReason: "Feishu account is disabled or not running in webhook mode.",
+      apply: (value) => {
+        account.verificationToken = value;
+      },
+    });
+  }
+}
+
+function collectNextcloudTalkAssignments(params: {
+  config: OpenClawConfig;
+  defaults: SecretDefaults | undefined;
+  context: ResolverContext;
+}): void {
+  const channels = params.config.channels as Record<string, unknown> | undefined;
+  if (!isRecord(channels)) {
+    return;
+  }
+  const nextcloudTalk = channels["nextcloud-talk"];
+  if (!isRecord(nextcloudTalk)) {
+    return;
+  }
+  const surface = resolveChannelAccountSurface(nextcloudTalk);
+  const baseSecretFile = normalizeSecretStringValue(nextcloudTalk.botSecretFile);
+  const topLevelBotSecretActive = !surface.channelEnabled
+    ? false
+    : !surface.hasExplicitAccounts
+      ? baseSecretFile.length === 0
+      : surface.accounts.some(
+          ({ account, enabled }) =>
+            enabled &&
+            !hasOwnProperty(account, "botSecret") &&
+            (!hasOwnProperty(account, "botSecretFile") ||
+              normalizeSecretStringValue(account.botSecretFile).length === 0) &&
+            baseSecretFile.length === 0,
+        );
+  collectSecretInputAssignment({
+    value: nextcloudTalk.botSecret,
+    path: "channels.nextcloud-talk.botSecret",
+    expected: "string",
+    defaults: params.defaults,
+    context: params.context,
+    active: topLevelBotSecretActive,
+    inactiveReason:
+      "no enabled Nextcloud Talk surface inherits this top-level botSecret (botSecretFile is configured).",
+    apply: (value) => {
+      nextcloudTalk.botSecret = value;
+    },
+  });
+  const baseApiPasswordFile = normalizeSecretStringValue(nextcloudTalk.apiPasswordFile);
+  const topLevelApiPasswordActive = !surface.channelEnabled
+    ? false
+    : !surface.hasExplicitAccounts
+      ? baseApiPasswordFile.length === 0
+      : surface.accounts.some(
+          ({ account, enabled }) =>
+            enabled &&
+            !hasOwnProperty(account, "apiPassword") &&
+            (!hasOwnProperty(account, "apiPasswordFile") ||
+              normalizeSecretStringValue(account.apiPasswordFile).length === 0) &&
+            baseApiPasswordFile.length === 0,
+        );
+  collectSecretInputAssignment({
+    value: nextcloudTalk.apiPassword,
+    path: "channels.nextcloud-talk.apiPassword",
+    expected: "string",
+    defaults: params.defaults,
+    context: params.context,
+    active: topLevelApiPasswordActive,
+    inactiveReason:
+      "no enabled Nextcloud Talk surface inherits this top-level apiPassword (apiPasswordFile is configured).",
+    apply: (value) => {
+      nextcloudTalk.apiPassword = value;
+    },
+  });
+  if (!surface.hasExplicitAccounts) {
+    return;
+  }
+  for (const { accountId, account, enabled } of surface.accounts) {
+    if (hasOwnProperty(account, "botSecret")) {
+      collectSecretInputAssignment({
+        value: account.botSecret,
+        path: `channels.nextcloud-talk.accounts.${accountId}.botSecret`,
+        expected: "string",
+        defaults: params.defaults,
+        context: params.context,
+        active: enabled && normalizeSecretStringValue(account.botSecretFile).length === 0,
+        inactiveReason: "Nextcloud Talk account is disabled or botSecretFile is configured.",
+        apply: (value) => {
+          account.botSecret = value;
+        },
+      });
+    }
+    if (hasOwnProperty(account, "apiPassword")) {
+      collectSecretInputAssignment({
+        value: account.apiPassword,
+        path: `channels.nextcloud-talk.accounts.${accountId}.apiPassword`,
+        expected: "string",
+        defaults: params.defaults,
+        context: params.context,
+        active: enabled && normalizeSecretStringValue(account.apiPasswordFile).length === 0,
+        inactiveReason: "Nextcloud Talk account is disabled or apiPasswordFile is configured.",
+        apply: (value) => {
+          account.apiPassword = value;
+        },
+      });
+    }
+  }
+}
+
 function collectGoogleChatAccountAssignment(params: {
   target: GoogleChatAccountLike;
   path: string;
@@ -620,5 +1014,10 @@ export function collectChannelConfigAssignments(params: {
   collectDiscordAssignments(params);
   collectIrcAssignments(params);
   collectBlueBubblesAssignments(params);
+  collectMattermostAssignments(params);
+  collectMatrixAssignments(params);
   collectMSTeamsAssignments(params);
+  collectNextcloudTalkAssignments(params);
+  collectFeishuAssignments(params);
+  collectZaloAssignments(params);
 }

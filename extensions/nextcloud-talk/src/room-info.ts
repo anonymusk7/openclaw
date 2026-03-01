@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { RuntimeEnv } from "openclaw/plugin-sdk";
 import type { ResolvedNextcloudTalkAccount } from "./accounts.js";
+import { normalizeSecretInputString } from "./secret-input.js";
 
 const ROOM_CACHE_TTL_MS = 5 * 60 * 1000;
 const ROOM_CACHE_ERROR_TTL_MS = 30 * 1000;
@@ -15,11 +16,12 @@ function resolveRoomCacheKey(params: { accountId: string; roomToken: string }) {
 }
 
 function readApiPassword(params: {
-  apiPassword?: string;
+  apiPassword?: unknown;
   apiPasswordFile?: string;
 }): string | undefined {
-  if (params.apiPassword?.trim()) {
-    return params.apiPassword.trim();
+  const inlinePassword = normalizeSecretInputString(params.apiPassword);
+  if (inlinePassword) {
+    return inlinePassword;
   }
   if (!params.apiPasswordFile) {
     return undefined;

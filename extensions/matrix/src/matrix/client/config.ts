@@ -1,12 +1,13 @@
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "openclaw/plugin-sdk/account-id";
 import { getMatrixRuntime } from "../../runtime.js";
+import { normalizeSecretInputString } from "../../secret-input.js";
 import type { CoreConfig } from "../../types.js";
 import { loadMatrixSdk } from "../sdk-runtime.js";
 import { ensureMatrixSdkLoggingConfigured } from "./logging.js";
 import type { MatrixAuth, MatrixResolvedConfig } from "./types.js";
 
-function clean(value?: string): string {
-  return value?.trim() ?? "";
+function clean(value: unknown): string {
+  return normalizeSecretInputString(value) ?? "";
 }
 
 /** Shallow-merge known nested config sub-objects so partial overrides inherit base values. */

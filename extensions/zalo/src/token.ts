@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { type BaseTokenResolution, DEFAULT_ACCOUNT_ID } from "openclaw/plugin-sdk";
+import { normalizeSecretInputString } from "./secret-input.js";
 import type { ZaloConfig } from "./types.js";
 
 export type ZaloTokenResolution = BaseTokenResolution & {
@@ -19,7 +20,7 @@ export function resolveZaloToken(
       : undefined;
 
   if (accountConfig) {
-    const token = accountConfig.botToken?.trim();
+    const token = normalizeSecretInputString(accountConfig.botToken);
     if (token) {
       return { token, source: "config" };
     }
@@ -37,7 +38,7 @@ export function resolveZaloToken(
   }
 
   if (isDefaultAccount) {
-    const token = baseConfig?.botToken?.trim();
+    const token = normalizeSecretInputString(baseConfig?.botToken);
     if (token) {
       return { token, source: "config" };
     }

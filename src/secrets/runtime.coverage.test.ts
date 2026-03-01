@@ -54,6 +54,26 @@ function buildConfigForOpenClawTarget(entry: SecretRegistryEntry, envId: string)
   if (entry.id === "channels.slack.accounts.*.signingSecret") {
     setPathCreateStrict(config, ["channels", "slack", "accounts", "sample", "mode"], "http");
   }
+  if (entry.id === "channels.zalo.webhookSecret") {
+    setPathCreateStrict(config, ["channels", "zalo", "webhookUrl"], "https://example.com/hook");
+  }
+  if (entry.id === "channels.zalo.accounts.*.webhookSecret") {
+    setPathCreateStrict(
+      config,
+      ["channels", "zalo", "accounts", "sample", "webhookUrl"],
+      "https://example.com/hook",
+    );
+  }
+  if (entry.id === "channels.feishu.verificationToken") {
+    setPathCreateStrict(config, ["channels", "feishu", "connectionMode"], "webhook");
+  }
+  if (entry.id === "channels.feishu.accounts.*.verificationToken") {
+    setPathCreateStrict(
+      config,
+      ["channels", "feishu", "accounts", "sample", "connectionMode"],
+      "webhook",
+    );
+  }
   return config;
 }
 
