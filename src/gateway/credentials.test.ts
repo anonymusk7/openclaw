@@ -120,7 +120,7 @@ describe("resolveGatewayCredentialsFromConfig", () => {
   it("throws when local password auth relies on an unresolved SecretRef", () => {
     expect(() =>
       resolveGatewayCredentialsFromConfig({
-        cfg: cfg({
+        cfg: {
           gateway: {
             mode: "local",
             auth: {
@@ -133,7 +133,7 @@ describe("resolveGatewayCredentialsFromConfig", () => {
               default: { source: "env" },
             },
           },
-        }),
+        } as unknown as OpenClawConfig,
         env: {} as NodeJS.ProcessEnv,
         includeLegacyEnv: false,
       }),
@@ -233,7 +233,7 @@ describe("resolveGatewayCredentialsFromConfig", () => {
   it("throws when remote token auth relies on an unresolved SecretRef", () => {
     expect(() =>
       resolveGatewayCredentialsFromConfig({
-        cfg: cfg({
+        cfg: {
           gateway: {
             mode: "remote",
             remote: {
@@ -247,7 +247,7 @@ describe("resolveGatewayCredentialsFromConfig", () => {
               default: { source: "env" },
             },
           },
-        }),
+        } as unknown as OpenClawConfig,
         env: {} as NodeJS.ProcessEnv,
         includeLegacyEnv: false,
         remoteTokenFallback: "remote-only",
@@ -258,7 +258,7 @@ describe("resolveGatewayCredentialsFromConfig", () => {
   it("throws when remote password auth relies on an unresolved SecretRef", () => {
     expect(() =>
       resolveGatewayCredentialsFromConfig({
-        cfg: cfg({
+        cfg: {
           gateway: {
             mode: "remote",
             remote: {
@@ -272,7 +272,7 @@ describe("resolveGatewayCredentialsFromConfig", () => {
               default: { source: "env" },
             },
           },
-        }),
+        } as unknown as OpenClawConfig,
         env: {} as NodeJS.ProcessEnv,
         includeLegacyEnv: false,
         remotePasswordFallback: "remote-only",
