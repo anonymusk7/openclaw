@@ -65,6 +65,21 @@ async function resolveLocalGatewayPasswordSecretIfNeeded(
   cfg.gateway.auth.password = value.trim();
 }
 
+function emitQrSecretResolveDiagnostics(diagnostics: string[], opts: QrCliOptions): void {
+  if (diagnostics.length === 0) {
+    return;
+  }
+  const toStderr = opts.json === true || opts.setupCodeOnly === true;
+  for (const entry of diagnostics) {
+    const message = theme.warn(`[secrets] ${entry}`);
+    if (toStderr) {
+      defaultRuntime.error(message);
+    } else {
+      defaultRuntime.log(message);
+    }
+  }
+}
+
 export function registerQrCli(program: Command) {
   program
     .command("qr")
@@ -96,16 +111,17 @@ export function registerQrCli(program: Command) {
         const wantsRemote = opts.remote === true;
 
         const loadedRaw = loadConfig();
-        const loaded =
-          wantsRemote && !token && !password
-            ? (
-                await resolveCommandSecretRefsViaGateway({
-                  config: loadedRaw,
-                  commandName: "qr --remote",
-                  targetIds: getQrRemoteCommandSecretTargetIds(),
-                })
-              ).resolvedConfig
-            : loadedRaw;
+        let loaded = loadedRaw;
+        let remoteDiagnostics: string[] = [];
+        if (wantsRemote && !token && !password) {
+          const resolvedRemote = await resolveCommandSecretRefsViaGateway({
+            config: loadedRaw,
+            commandName: "qr --remote",
+            targetIds: getQrRemoteCommandSecretTargetIds(),
+          });
+          loaded = resolvedRemote.resolvedConfig;
+          remoteDiagnostics = resolvedRemote.diagnostics;
+        }
         const cfg = {
           ...loaded,
           gateway: {
@@ -115,6 +131,7 @@ export function registerQrCli(program: Command) {
             },
           },
         };
+        emitQrSecretResolveDiagnostics(remoteDiagnostics, opts);
 
         if (token) {
           cfg.gateway.auth.mode = "token";

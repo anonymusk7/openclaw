@@ -14,7 +14,7 @@ const loadConfig = vi.fn();
 const runCommandWithTimeout = vi.fn();
 const resolveCommandSecretRefsViaGateway = vi.fn(async ({ config }: { config: unknown }) => ({
   resolvedConfig: config,
-  diagnostics: [],
+  diagnostics: [] as string[],
 }));
 const qrGenerate = vi.fn((_input, _opts, cb: (output: string) => void) => {
   cb("ASCII-QR");
@@ -248,6 +248,43 @@ describe("registerQrCli", () => {
     );
   });
 
+  it("logs remote secret diagnostics in non-json output mode", async () => {
+    loadConfig.mockReturnValue(createRemoteQrConfig());
+    resolveCommandSecretRefsViaGateway.mockResolvedValueOnce({
+      resolvedConfig: createRemoteQrConfig(),
+      diagnostics: ["gateway.remote.token inactive"] as string[],
+    });
+
+    await runQr(["--remote"]);
+
+    expect(
+      runtime.log.mock.calls.some((call) =>
+        String(call[0] ?? "").includes("gateway.remote.token inactive"),
+      ),
+    ).toBe(true);
+  });
+
+  it("routes remote secret diagnostics to stderr for setup-code-only output", async () => {
+    loadConfig.mockReturnValue(createRemoteQrConfig());
+    resolveCommandSecretRefsViaGateway.mockResolvedValueOnce({
+      resolvedConfig: createRemoteQrConfig(),
+      diagnostics: ["gateway.remote.token inactive"] as string[],
+    });
+
+    await runQr(["--setup-code-only", "--remote"]);
+
+    expect(
+      runtime.error.mock.calls.some((call) =>
+        String(call[0] ?? "").includes("gateway.remote.token inactive"),
+      ),
+    ).toBe(true);
+    const expected = encodePairingSetupCode({
+      url: "wss://remote.example.com:444",
+      token: "remote-tok",
+    });
+    expect(runtime.log).toHaveBeenCalledWith(expected);
+  });
+
   it.each([
     { name: "without tailscale configured", withTailscale: false },
     { name: "when tailscale is configured", withTailscale: true },
@@ -271,6 +308,34 @@ describe("registerQrCli", () => {
     expect(payload.auth).toBe("token");
     expect(payload.urlSource).toBe("gateway.remote.url");
     expect(runCommandWithTimeout).not.toHaveBeenCalled();
+  });
+
+  it("routes remote secret diagnostics to stderr for json output", async () => {
+    loadConfig.mockReturnValue(createRemoteQrConfig());
+    resolveCommandSecretRefsViaGateway.mockResolvedValueOnce({
+      resolvedConfig: createRemoteQrConfig(),
+      diagnostics: ["gateway.remote.password inactive"] as string[],
+    });
+    runCommandWithTimeout.mockResolvedValue({
+      code: 0,
+      stdout: '{"Self":{"DNSName":"ts-host.tailnet.ts.net."}}',
+      stderr: "",
+    });
+
+    await runQr(["--json", "--remote"]);
+
+    const payload = JSON.parse(String(runtime.log.mock.calls.at(-1)?.[0] ?? "{}")) as {
+      setupCode?: string;
+      gatewayUrl?: string;
+      auth?: string;
+      urlSource?: string;
+    };
+    expect(payload.gatewayUrl).toBe("wss://remote.example.com:444");
+    expect(
+      runtime.error.mock.calls.some((call) =>
+        String(call[0] ?? "").includes("gateway.remote.password inactive"),
+      ),
+    ).toBe(true);
   });
 
   it("errors when --remote is set but no remote URL is configured", async () => {

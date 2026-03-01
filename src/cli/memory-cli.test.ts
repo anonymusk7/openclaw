@@ -9,7 +9,7 @@ const loadConfig = vi.fn(() => ({}));
 const resolveDefaultAgentId = vi.fn(() => "main");
 const resolveCommandSecretRefsViaGateway = vi.fn(async ({ config }: { config: unknown }) => ({
   resolvedConfig: config,
-  diagnostics: [],
+  diagnostics: [] as string[],
 }));
 
 vi.mock("../memory/index.js", () => ({
@@ -187,6 +187,30 @@ describe("memory cli", () => {
         ]),
       }),
     );
+  });
+
+  it("logs gateway secret diagnostics for non-json status output", async () => {
+    const close = vi.fn(async () => {});
+    resolveCommandSecretRefsViaGateway.mockResolvedValueOnce({
+      resolvedConfig: {},
+      diagnostics: ["agents.defaults.memorySearch.remote.apiKey inactive"] as string[],
+    });
+    mockManager({
+      probeVectorAvailability: vi.fn(async () => true),
+      status: () => makeMemoryStatus({ workspaceDir: undefined }),
+      close,
+    });
+
+    const log = spyRuntimeLogs();
+    await runMemoryCli(["status"]);
+
+    expect(
+      log.mock.calls.some(
+        (call) =>
+          typeof call[0] === "string" &&
+          call[0].includes("agents.defaults.memorySearch.remote.apiKey inactive"),
+      ),
+    ).toBe(true);
   });
 
   it("prints vector error when unavailable", async () => {
@@ -382,6 +406,33 @@ describe("memory cli", () => {
     expect(Array.isArray(payload)).toBe(true);
     expect((payload[0] as Record<string, unknown>)?.agentId).toBe("main");
     expect(close).toHaveBeenCalled();
+  });
+
+  it("routes gateway secret diagnostics to stderr for json status output", async () => {
+    const close = vi.fn(async () => {});
+    resolveCommandSecretRefsViaGateway.mockResolvedValueOnce({
+      resolvedConfig: {},
+      diagnostics: ["agents.defaults.memorySearch.remote.apiKey inactive"] as string[],
+    });
+    mockManager({
+      probeVectorAvailability: vi.fn(async () => true),
+      status: () => makeMemoryStatus({ workspaceDir: undefined }),
+      close,
+    });
+
+    const log = spyRuntimeLogs();
+    const error = spyRuntimeErrors();
+    await runMemoryCli(["status", "--json"]);
+
+    const payload = firstLoggedJson(log);
+    expect(Array.isArray(payload)).toBe(true);
+    expect(
+      error.mock.calls.some(
+        (call) =>
+          typeof call[0] === "string" &&
+          call[0].includes("agents.defaults.memorySearch.remote.apiKey inactive"),
+      ),
+    ).toBe(true);
   });
 
   it("logs default message when memory manager is missing", async () => {
