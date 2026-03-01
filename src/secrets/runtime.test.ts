@@ -871,6 +871,66 @@ describe("secrets runtime snapshot", () => {
     );
   });
 
+  it("treats Discord voice TTS refs as inactive when voice is disabled", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        channels: {
+          discord: {
+            voice: {
+              enabled: false,
+              tts: {
+                openai: {
+                  apiKey: {
+                    source: "env",
+                    provider: "default",
+                    id: "MISSING_DISCORD_VOICE_TTS_OPENAI",
+                  },
+                },
+              },
+            },
+            accounts: {
+              work: {
+                enabled: true,
+                voice: {
+                  enabled: false,
+                  tts: {
+                    openai: {
+                      apiKey: {
+                        source: "env",
+                        provider: "default",
+                        id: "MISSING_DISCORD_WORK_VOICE_TTS_OPENAI",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+      env: {},
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.channels?.discord?.voice?.tts?.openai?.apiKey).toEqual({
+      source: "env",
+      provider: "default",
+      id: "MISSING_DISCORD_VOICE_TTS_OPENAI",
+    });
+    expect(snapshot.config.channels?.discord?.accounts?.work?.voice?.tts?.openai?.apiKey).toEqual({
+      source: "env",
+      provider: "default",
+      id: "MISSING_DISCORD_WORK_VOICE_TTS_OPENAI",
+    });
+    expect(snapshot.warnings.map((warning) => warning.path)).toEqual(
+      expect.arrayContaining([
+        "channels.discord.voice.tts.openai.apiKey",
+        "channels.discord.accounts.work.voice.tts.openai.apiKey",
+      ]),
+    );
+  });
+
   it("handles Discord nested inheritance for enabled and disabled accounts", async () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({

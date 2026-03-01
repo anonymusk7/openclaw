@@ -356,8 +356,9 @@ function collectDiscordAssignments(params: {
       pathPrefix: "channels.discord.voice.tts",
       defaults: params.defaults,
       context: params.context,
-      active: isBaseFieldActiveForChannelSurface(surface, "voice"),
-      inactiveReason: "no enabled account inherits this top-level Discord voice config.",
+      active: isBaseFieldActiveForChannelSurface(surface, "voice") && isEnabledFlag(discord.voice),
+      inactiveReason:
+        "no enabled Discord surface inherits this top-level voice config or voice is disabled.",
     });
   }
   if (!surface.hasExplicitAccounts) {
@@ -389,8 +390,8 @@ function collectDiscordAssignments(params: {
         pathPrefix: `channels.discord.accounts.${accountId}.voice.tts`,
         defaults: params.defaults,
         context: params.context,
-        active: enabled,
-        inactiveReason: "Discord account is disabled.",
+        active: enabled && isEnabledFlag(account.voice),
+        inactiveReason: "Discord account is disabled or voice is disabled for this account.",
       });
     }
   }
