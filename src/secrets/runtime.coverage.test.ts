@@ -38,6 +38,22 @@ function buildConfigForOpenClawTarget(entry: SecretRegistryEntry, envId: string)
   if (entry.id === "gateway.auth.password") {
     setPathCreateStrict(config, ["gateway", "auth", "mode"], "password");
   }
+  if (entry.id === "channels.telegram.webhookSecret") {
+    setPathCreateStrict(config, ["channels", "telegram", "webhookUrl"], "https://example.com/hook");
+  }
+  if (entry.id === "channels.telegram.accounts.*.webhookSecret") {
+    setPathCreateStrict(
+      config,
+      ["channels", "telegram", "accounts", "sample", "webhookUrl"],
+      "https://example.com/hook",
+    );
+  }
+  if (entry.id === "channels.slack.signingSecret") {
+    setPathCreateStrict(config, ["channels", "slack", "mode"], "http");
+  }
+  if (entry.id === "channels.slack.accounts.*.signingSecret") {
+    setPathCreateStrict(config, ["channels", "slack", "accounts", "sample", "mode"], "http");
+  }
   return config;
 }
 
