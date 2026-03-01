@@ -154,7 +154,8 @@ export function registerQrCli(program: Command) {
             );
           }
         }
-        if (!wantsRemote && !password && !token) {
+        const localAuthMode = cfg.gateway?.auth?.mode ?? "token";
+        if (!wantsRemote && !password && !token && localAuthMode === "password") {
           await resolveLocalGatewayPasswordSecretIfNeeded(cfg);
         }
 
