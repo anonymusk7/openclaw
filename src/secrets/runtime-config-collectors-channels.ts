@@ -211,7 +211,7 @@ function collectSlackAssignments(params: {
     return;
   }
   const surface = resolveChannelAccountSurface(slack);
-  const fields = ["botToken", "appToken", "userToken", "signingSecret"] as const;
+  const fields = ["botToken", "appToken", "userToken"] as const;
   for (const field of fields) {
     collectSimpleChannelFieldAssignments({
       channelKey: "slack",
@@ -222,6 +222,53 @@ function collectSlackAssignments(params: {
       context: params.context,
       topInactiveReason: `no enabled account inherits this top-level Slack ${field}.`,
       accountInactiveReason: "Slack account is disabled.",
+    });
+  }
+  const baseMode = slack.mode === "http" || slack.mode === "socket" ? slack.mode : "socket";
+  const topLevelSigningSecretActive = !surface.channelEnabled
+    ? false
+    : !surface.hasExplicitAccounts
+      ? baseMode === "http"
+      : surface.accounts.some(({ account, enabled }) => {
+          if (!enabled || hasOwnProperty(account, "signingSecret")) {
+            return false;
+          }
+          const accountMode =
+            account.mode === "http" || account.mode === "socket" ? account.mode : baseMode;
+          return accountMode === "http";
+        });
+  collectSecretInputAssignment({
+    value: slack.signingSecret,
+    path: "channels.slack.signingSecret",
+    expected: "string",
+    defaults: params.defaults,
+    context: params.context,
+    active: topLevelSigningSecretActive,
+    inactiveReason: "no enabled Slack HTTP-mode surface inherits this top-level signingSecret.",
+    apply: (value) => {
+      slack.signingSecret = value;
+    },
+  });
+  if (!surface.hasExplicitAccounts) {
+    return;
+  }
+  for (const { accountId, account, enabled } of surface.accounts) {
+    if (!hasOwnProperty(account, "signingSecret")) {
+      continue;
+    }
+    const accountMode =
+      account.mode === "http" || account.mode === "socket" ? account.mode : baseMode;
+    collectSecretInputAssignment({
+      value: account.signingSecret,
+      path: `channels.slack.accounts.${accountId}.signingSecret`,
+      expected: "string",
+      defaults: params.defaults,
+      context: params.context,
+      active: enabled && accountMode === "http",
+      inactiveReason: "Slack account is disabled or not running in HTTP mode.",
+      apply: (value) => {
+        account.signingSecret = value;
+      },
     });
   }
 }

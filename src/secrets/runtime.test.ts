@@ -699,6 +699,41 @@ describe("secrets runtime snapshot", () => {
     );
   });
 
+  it("treats Slack signingSecret refs as inactive when mode is socket", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        channels: {
+          slack: {
+            mode: "socket",
+            signingSecret: {
+              source: "env",
+              provider: "default",
+              id: "MISSING_SLACK_SIGNING_SECRET",
+            },
+            accounts: {
+              work: {
+                enabled: true,
+                mode: "socket",
+              },
+            },
+          },
+        },
+      }),
+      env: {},
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.channels?.slack?.signingSecret).toEqual({
+      source: "env",
+      provider: "default",
+      id: "MISSING_SLACK_SIGNING_SECRET",
+    });
+    expect(snapshot.warnings.map((warning) => warning.path)).toContain(
+      "channels.slack.signingSecret",
+    );
+  });
+
   it("treats top-level Google Chat serviceAccount as inactive when enabled accounts use serviceAccountRef", async () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
