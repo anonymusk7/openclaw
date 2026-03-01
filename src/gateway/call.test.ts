@@ -680,6 +680,55 @@ describe("callGateway password resolution", () => {
     expect(lastClientOptions?.password).toBe("resolved-local-ref-password");
   });
 
+  it("does not resolve local password ref when env password takes precedence", async () => {
+    process.env.OPENCLAW_GATEWAY_PASSWORD = "from-env";
+    loadConfig.mockReturnValue({
+      gateway: {
+        mode: "local",
+        bind: "loopback",
+        auth: {
+          mode: "password",
+          password: { source: "env", provider: "default", id: "MISSING_LOCAL_REF_PASSWORD" },
+        },
+      },
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+    } as unknown as OpenClawConfig);
+
+    await callGateway({ method: "health" });
+
+    expect(lastClientOptions?.password).toBe("from-env");
+  });
+
+  it("does not resolve local password ref when remote password is already configured", async () => {
+    loadConfig.mockReturnValue({
+      gateway: {
+        mode: "remote",
+        bind: "loopback",
+        auth: {
+          mode: "password",
+          password: { source: "env", provider: "default", id: "MISSING_LOCAL_REF_PASSWORD" },
+        },
+        remote: {
+          url: "wss://remote.example:18789",
+          password: "remote-secret",
+        },
+      },
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+    } as unknown as OpenClawConfig);
+
+    await callGateway({ method: "health" });
+
+    expect(lastClientOptions?.password).toBe("remote-secret");
+  });
+
   it("resolves gateway.remote.token SecretInput refs when remote token is required", async () => {
     process.env.REMOTE_REF_TOKEN = "resolved-remote-ref-token";
     loadConfig.mockReturnValue({

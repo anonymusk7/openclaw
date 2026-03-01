@@ -6,7 +6,7 @@ import {
   resolveGatewayPort,
   resolveStateDir,
 } from "../config/config.js";
-import { resolveSecretInputRef } from "../config/types.secrets.js";
+import { hasConfiguredSecretInput, resolveSecretInputRef } from "../config/types.secrets.js";
 import { loadOrCreateDeviceIdentity } from "../infra/device-identity.js";
 import { loadGatewayTlsRuntime } from "../infra/tls/gateway.js";
 import { secretRefKey } from "../secrets/ref-contract.js";
@@ -332,14 +332,27 @@ async function resolveGatewayCredentials(context: ResolvedGatewayCallContext): P
   token?: string;
   password?: string;
 }> {
+  if (context.explicitAuth.token || context.explicitAuth.password) {
+    return {
+      token: context.explicitAuth.token,
+      password: context.explicitAuth.password,
+    };
+  }
+
   let resolvedConfig = context.config;
   const envToken = readGatewayTokenEnv(process.env);
   const envPassword = readGatewayPasswordEnv(process.env);
+  const defaults = context.config.secrets?.defaults;
   const auth = context.config.gateway?.auth;
-  if (
-    auth &&
-    resolveSecretInputRef({ value: auth.password, defaults: context.config.secrets?.defaults }).ref
-  ) {
+  const remoteConfig = context.config.gateway?.remote;
+  const remotePasswordConfigured =
+    context.isRemoteMode && hasConfiguredSecretInput(remoteConfig?.password, defaults);
+  const shouldResolveLocalPassword =
+    Boolean(auth) &&
+    !envPassword &&
+    (!context.isRemoteMode || !remotePasswordConfigured) &&
+    Boolean(resolveSecretInputRef({ value: auth?.password, defaults }).ref);
+  if (shouldResolveLocalPassword) {
     resolvedConfig = structuredClone(context.config);
     const resolvedPassword = await resolveGatewaySecretInputString({
       config: resolvedConfig,
@@ -351,21 +364,27 @@ async function resolveGatewayCredentials(context: ResolvedGatewayCallContext): P
     }
   }
   const remote = resolvedConfig.gateway?.remote;
-  const defaults = resolvedConfig.secrets?.defaults;
+  const resolvedDefaults = resolvedConfig.secrets?.defaults;
   if (remote) {
     const localToken = trimToUndefined(resolvedConfig.gateway?.auth?.token);
     const localPassword = trimToUndefined(resolvedConfig.gateway?.auth?.password);
     const needsRemoteToken = !envToken && !localToken;
     const needsRemotePassword = !envPassword && !localPassword;
 
-    if (needsRemoteToken && resolveSecretInputRef({ value: remote.token, defaults }).ref) {
+    if (
+      needsRemoteToken &&
+      resolveSecretInputRef({ value: remote.token, defaults: resolvedDefaults }).ref
+    ) {
       remote.token = await resolveGatewaySecretInputString({
         config: resolvedConfig,
         value: remote.token,
         path: "gateway.remote.token",
       });
     }
-    if (needsRemotePassword && resolveSecretInputRef({ value: remote.password, defaults }).ref) {
+    if (
+      needsRemotePassword &&
+      resolveSecretInputRef({ value: remote.password, defaults: resolvedDefaults }).ref
+    ) {
       remote.password = await resolveGatewaySecretInputString({
         config: resolvedConfig,
         value: remote.password,
