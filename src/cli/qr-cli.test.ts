@@ -135,6 +135,34 @@ describe("registerQrCli", () => {
     expect(runtime.log).toHaveBeenCalledWith(expected);
   });
 
+  it("resolves local gateway auth password SecretRefs before setup code generation", async () => {
+    vi.stubEnv("QR_LOCAL_GATEWAY_PASSWORD", "local-password-secret");
+    loadConfig.mockReturnValue({
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+      gateway: {
+        bind: "custom",
+        customBindHost: "gateway.local",
+        auth: {
+          mode: "password",
+          password: { source: "env", provider: "default", id: "QR_LOCAL_GATEWAY_PASSWORD" },
+        },
+      },
+    });
+
+    await runQr(["--setup-code-only"]);
+
+    const expected = encodePairingSetupCode({
+      url: "ws://gateway.local:18789",
+      password: "local-password-secret",
+    });
+    expect(runtime.log).toHaveBeenCalledWith(expected);
+    expect(resolveCommandSecretRefsViaGateway).not.toHaveBeenCalled();
+  });
+
   it("exits with error when gateway config is not pairable", async () => {
     loadConfig.mockReturnValue({
       gateway: {
