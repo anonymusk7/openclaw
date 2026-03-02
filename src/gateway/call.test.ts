@@ -876,14 +876,37 @@ describe("callGateway password resolution", () => {
     expect(lastClientOptions?.password).toBeUndefined();
   });
 
-  it("does not resolve remote refs on non-remote gateway calls", async () => {
+  it("resolves remote token refs on local-mode calls when fallback token can win", async () => {
+    process.env.LOCAL_FALLBACK_REMOTE_TOKEN = "resolved-local-fallback-remote-token";
     loadConfig.mockReturnValue({
       gateway: {
         mode: "local",
         bind: "loopback",
-        auth: {
-          mode: "none",
+        auth: {},
+        remote: {
+          token: { source: "env", provider: "default", id: "LOCAL_FALLBACK_REMOTE_TOKEN" },
+          password: { source: "env", provider: "default", id: "MISSING_REMOTE_PASSWORD" },
         },
+      },
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+    } as unknown as OpenClawConfig);
+
+    await callGateway({ method: "health" });
+
+    expect(lastClientOptions?.token).toBe("resolved-local-fallback-remote-token");
+    expect(lastClientOptions?.password).toBeUndefined();
+  });
+
+  it("does not resolve remote refs on non-remote gateway calls when password auth is disabled", async () => {
+    loadConfig.mockReturnValue({
+      gateway: {
+        mode: "local",
+        bind: "loopback",
+        auth: { mode: "none" },
         remote: {
           url: "wss://remote.example:18789",
           token: { source: "env", provider: "default", id: "MISSING_REMOTE_TOKEN" },
@@ -897,10 +920,9 @@ describe("callGateway password resolution", () => {
       },
     } as unknown as OpenClawConfig);
 
-    await callGateway({ method: "health" });
+    await expect(callGateway({ method: "health" })).rejects.toThrow("MISSING_REMOTE_TOKEN");
 
-    expect(lastClientOptions?.token).toBeUndefined();
-    expect(lastClientOptions?.password).toBeUndefined();
+    expect(lastClientOptions).toBeNull();
   });
 
   it.each(explicitAuthCases)("uses explicit $label when url override is set", async (testCase) => {

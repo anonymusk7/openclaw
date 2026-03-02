@@ -423,6 +423,54 @@ async function resolveGatewayCredentialsWithEnv(
       });
     }
   }
+  const localModeRemote = !context.isRemoteMode ? resolvedConfig.gateway?.remote : undefined;
+  if (localModeRemote) {
+    const localToken = trimToUndefined(resolvedConfig.gateway?.auth?.token);
+    const localPassword = trimToUndefined(resolvedConfig.gateway?.auth?.password);
+    const localModeRemotePasswordConfigured = hasConfiguredSecretInput(
+      localModeRemote.password,
+      resolvedDefaults,
+    );
+    const localModePasswordSourceConfigured = Boolean(
+      envPassword ||
+      localPassword ||
+      trimToUndefined(localModeRemote.password) ||
+      localModeRemotePasswordConfigured,
+    );
+    const passwordCanWinBeforeRemoteTokenResolution =
+      localPasswordCanWinInLocalMode && localModePasswordSourceConfigured;
+    const remoteTokenRef = resolveSecretInputRef({
+      value: localModeRemote.token,
+      defaults: resolvedDefaults,
+    }).ref;
+    if (!passwordCanWinBeforeRemoteTokenResolution && !envToken && !localToken && remoteTokenRef) {
+      localModeRemote.token = await resolveGatewaySecretInputString({
+        config: resolvedConfig,
+        value: localModeRemote.token,
+        path: "gateway.remote.token",
+        env,
+      });
+    }
+    const tokenCanWin = Boolean(envToken || localToken || trimToUndefined(localModeRemote.token));
+    const remotePasswordRef = resolveSecretInputRef({
+      value: localModeRemote.password,
+      defaults: resolvedDefaults,
+    }).ref;
+    if (
+      !tokenCanWin &&
+      !envPassword &&
+      !localPassword &&
+      remotePasswordRef &&
+      localPasswordCanWinInLocalMode
+    ) {
+      localModeRemote.password = await resolveGatewaySecretInputString({
+        config: resolvedConfig,
+        value: localModeRemote.password,
+        path: "gateway.remote.password",
+        env,
+      });
+    }
+  }
   return resolveGatewayCredentialsFromConfig({
     cfg: resolvedConfig,
     env,
