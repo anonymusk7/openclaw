@@ -40,6 +40,37 @@ function readDevicePairPublicUrlFromConfig(cfg: ReturnType<typeof loadConfig>): 
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function readGatewayTokenEnv(env: NodeJS.ProcessEnv): string | undefined {
+  const primary = typeof env.OPENCLAW_GATEWAY_TOKEN === "string" ? env.OPENCLAW_GATEWAY_TOKEN : "";
+  if (primary.trim().length > 0) {
+    return primary.trim();
+  }
+  const legacy = typeof env.CLAWDBOT_GATEWAY_TOKEN === "string" ? env.CLAWDBOT_GATEWAY_TOKEN : "";
+  if (legacy.trim().length > 0) {
+    return legacy.trim();
+  }
+  return undefined;
+}
+
+function shouldResolveLocalGatewayPasswordSecret(
+  cfg: ReturnType<typeof loadConfig>,
+  env: NodeJS.ProcessEnv,
+): boolean {
+  const authMode = cfg.gateway?.auth?.mode;
+  if (authMode === "password") {
+    return true;
+  }
+  if (authMode === "token" || authMode === "none" || authMode === "trusted-proxy") {
+    return false;
+  }
+  const envToken = readGatewayTokenEnv(env);
+  const configToken =
+    typeof cfg.gateway?.auth?.token === "string" && cfg.gateway.auth.token.trim().length > 0
+      ? cfg.gateway.auth.token.trim()
+      : undefined;
+  return !envToken && !configToken;
+}
+
 async function resolveLocalGatewayPasswordSecretIfNeeded(
   cfg: ReturnType<typeof loadConfig>,
 ): Promise<void> {
@@ -171,8 +202,12 @@ export function registerQrCli(program: Command) {
             );
           }
         }
-        const localAuthMode = cfg.gateway?.auth?.mode ?? "token";
-        if (!wantsRemote && !password && !token && localAuthMode === "password") {
+        if (
+          !wantsRemote &&
+          !password &&
+          !token &&
+          shouldResolveLocalGatewayPasswordSecret(cfg, process.env)
+        ) {
           await resolveLocalGatewayPasswordSecretIfNeeded(cfg);
         }
 
