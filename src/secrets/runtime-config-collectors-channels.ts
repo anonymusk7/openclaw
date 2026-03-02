@@ -149,14 +149,18 @@ function collectTelegramAssignments(params: {
     ? false
     : !surface.hasExplicitAccounts
       ? baseTokenFile.length === 0
-      : surface.accounts.some(
-          ({ account, enabled }) =>
-            enabled &&
-            !hasOwnProperty(account, "botToken") &&
-            (!hasOwnProperty(account, "tokenFile") ||
-              !(typeof account.tokenFile === "string" && account.tokenFile.trim().length > 0)) &&
-            baseTokenFile.length === 0,
-        );
+      : surface.accounts.some(({ account, enabled }) => {
+          if (!enabled || baseTokenFile.length > 0) {
+            return false;
+          }
+          const accountBotTokenConfigured = hasConfiguredSecretInputValue(
+            account.botToken,
+            params.defaults,
+          );
+          const accountTokenFileConfigured =
+            typeof account.tokenFile === "string" && account.tokenFile.trim().length > 0;
+          return !accountBotTokenConfigured && !accountTokenFileConfigured;
+        });
   collectSecretInputAssignment({
     value: telegram.botToken,
     path: "channels.telegram.botToken",

@@ -1185,6 +1185,39 @@ describe("secrets runtime snapshot", () => {
     );
   });
 
+  it("treats top-level Telegram botToken refs as active when account botToken is blank", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        channels: {
+          telegram: {
+            botToken: {
+              source: "env",
+              provider: "default",
+              id: "TELEGRAM_BASE_TOKEN",
+            },
+            accounts: {
+              work: {
+                enabled: true,
+                botToken: "",
+              },
+            },
+          },
+        },
+      }),
+      env: {
+        TELEGRAM_BASE_TOKEN: "telegram-base-token",
+      },
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.channels?.telegram?.botToken).toBe("telegram-base-token");
+    expect(snapshot.config.channels?.telegram?.accounts?.work?.botToken).toBe("");
+    expect(snapshot.warnings.map((warning) => warning.path)).not.toContain(
+      "channels.telegram.botToken",
+    );
+  });
+
   it("treats Slack signingSecret refs as inactive when mode is socket", async () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
