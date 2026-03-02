@@ -96,9 +96,9 @@ Notes:
 - Auth-profile plan targets require `agentId`.
 - Plan entries target `profiles.*.key` / `profiles.*.token` and write sibling refs (`keyRef` / `tokenRef`).
 - Auth-profile refs are included in runtime resolution and audit coverage.
-- For web search: provider-specific keys (`tools.web.search.<provider>.apiKey`) are active only when
-  that provider is selected via `tools.web.search.provider`. In auto mode (provider unset), only
-  `tools.web.search.apiKey` is active.
+- For web search:
+  - In explicit provider mode (`tools.web.search.provider` set), only the selected provider key is active.
+  - In auto mode (`tools.web.search.provider` unset), `tools.web.search.apiKey` and provider-specific keys are active.
 
 ## Unsupported credentials
 
@@ -106,7 +106,7 @@ Out-of-scope credentials include:
 
 <!-- secretref-unsupported-list-start -->
 
-- `gateway.auth.token` (coming soon)
+- `gateway.auth.token`
 - `commands.ownerDisplaySecret`
 - `channels.matrix.accessToken`
 - `channels.matrix.accounts.*.accessToken`
