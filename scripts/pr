@@ -263,13 +263,13 @@ graphql_push_to_fork() {
 
   # Collect added/modified files
   local added_files
-  added_files=$(git diff --name-only --diff-filter=AM "$expected_oid" HEAD)
+  added_files=$(git diff --no-renames --name-only --diff-filter=AM "$expected_oid" HEAD)
   if [ -n "$added_files" ]; then
     additions="["
     local first=true
     while IFS= read -r fpath; do
       local b64
-      b64=$(base64 < "$fpath")
+      b64=$(base64 < "$fpath" | tr -d '\n')
       if [ "$first" = true ]; then first=false; else additions+=","; fi
       additions+="{\"path\":$(printf '%s' "$fpath" | jq -Rs .),\"contents\":$(printf '%s' "$b64" | jq -Rs .)}"
     done <<< "$added_files"
@@ -278,7 +278,7 @@ graphql_push_to_fork() {
 
   # Collect deleted files
   local deleted_files
-  deleted_files=$(git diff --name-only --diff-filter=D "$expected_oid" HEAD)
+  deleted_files=$(git diff --no-renames --name-only --diff-filter=D "$expected_oid" HEAD)
   if [ -n "$deleted_files" ]; then
     deletions="["
     local first=true
@@ -972,7 +972,7 @@ prepare_push() {
   git remote add prhead "$push_url"
 
   local remote_sha
-  remote_sha=$(git ls-remote prhead "refs/heads/$PR_HEAD" 2>/dev/null | awk '{print $1}')
+  remote_sha=$(git ls-remote prhead "refs/heads/$PR_HEAD" 2>/dev/null | awk '{print $1}' || true)
   if [ -z "$remote_sha" ]; then
     local https_url
     https_url=$(resolve_head_push_url_https 2>/dev/null) || true
