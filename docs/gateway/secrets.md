@@ -39,7 +39,10 @@ Examples of inactive surfaces:
 - Disabled tool/feature surfaces.
 - Web search provider-specific keys that are not selected by `tools.web.search.provider`.
   In auto mode (provider unset), only `tools.web.search.apiKey` is active.
-- `gateway.remote.token` / `gateway.remote.password` SecretRefs unless `gateway.mode=remote` or `gateway.remote.url` is configured.
+- `gateway.remote.token` / `gateway.remote.password` SecretRefs unless one of these is true:
+  - `gateway.mode=remote`
+  - `gateway.remote.url` is configured
+  - `gateway.tailscale.mode` is `serve` or `funnel`
 
 ## Onboarding reference preflight
 
