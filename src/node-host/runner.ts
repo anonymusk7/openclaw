@@ -150,6 +150,7 @@ export async function resolveNodeHostGatewayCredentials(params: {
 }): Promise<{ token?: string; password?: string }> {
   const env = params.env ?? process.env;
   const isRemoteMode = params.config.gateway?.mode === "remote";
+  const authMode = params.config.gateway?.auth?.mode;
   const tokenPath = isRemoteMode ? "gateway.remote.token" : "gateway.auth.token";
   const passwordPath = isRemoteMode ? "gateway.remote.password" : "gateway.auth.password";
   const configuredToken = isRemoteMode
@@ -167,14 +168,24 @@ export async function resolveNodeHostGatewayCredentials(params: {
       path: tokenPath,
       env,
     }));
+  const tokenCanWin = Boolean(token);
+  const localPasswordCanWin =
+    authMode === "password" ||
+    (authMode !== "token" && authMode !== "none" && authMode !== "trusted-proxy" && !tokenCanWin);
+  const shouldResolveConfiguredPassword =
+    !normalizeSecretInputString(env.OPENCLAW_GATEWAY_PASSWORD) &&
+    !tokenCanWin &&
+    (isRemoteMode || localPasswordCanWin);
   const password =
     normalizeSecretInputString(env.OPENCLAW_GATEWAY_PASSWORD) ??
-    (await resolveNodeHostSecretInputString({
-      config: params.config,
-      value: configuredPassword,
-      path: passwordPath,
-      env,
-    }));
+    (shouldResolveConfiguredPassword
+      ? await resolveNodeHostSecretInputString({
+          config: params.config,
+          value: configuredPassword,
+          path: passwordPath,
+          env,
+        })
+      : normalizeSecretInputString(configuredPassword));
 
   return { token, password };
 }
