@@ -91,9 +91,58 @@ function shouldPersistGeneratedToken(params: {
   return true;
 }
 
+function hasGatewayTokenCandidate(params: {
+  cfg: OpenClawConfig;
+  env: NodeJS.ProcessEnv;
+  authOverride?: GatewayAuthConfig;
+}): boolean {
+  const envToken =
+    params.env.OPENCLAW_GATEWAY_TOKEN?.trim() || params.env.CLAWDBOT_GATEWAY_TOKEN?.trim();
+  if (envToken) {
+    return true;
+  }
+  if (
+    typeof params.authOverride?.token === "string" &&
+    params.authOverride.token.trim().length > 0
+  ) {
+    return true;
+  }
+  return (
+    typeof params.cfg.gateway?.auth?.token === "string" &&
+    params.cfg.gateway.auth.token.trim().length > 0
+  );
+}
+
+function hasGatewayPasswordEnvCandidate(env: NodeJS.ProcessEnv): boolean {
+  return Boolean(env.OPENCLAW_GATEWAY_PASSWORD?.trim() || env.CLAWDBOT_GATEWAY_PASSWORD?.trim());
+}
+
+function shouldResolveGatewayPasswordSecretRef(params: {
+  cfg: OpenClawConfig;
+  env: NodeJS.ProcessEnv;
+  authOverride?: GatewayAuthConfig;
+}): boolean {
+  const explicitMode = params.authOverride?.mode ?? params.cfg.gateway?.auth?.mode;
+  if (explicitMode === "password") {
+    return true;
+  }
+  if (explicitMode === "token" || explicitMode === "none" || explicitMode === "trusted-proxy") {
+    return false;
+  }
+
+  if (hasGatewayTokenCandidate(params)) {
+    return false;
+  }
+  if (hasGatewayPasswordEnvCandidate(params.env)) {
+    return false;
+  }
+  return true;
+}
+
 async function resolveGatewayPasswordSecretRef(
   cfg: OpenClawConfig,
   env: NodeJS.ProcessEnv,
+  authOverride?: GatewayAuthConfig,
 ): Promise<OpenClawConfig> {
   const authPassword = cfg.gateway?.auth?.password;
   const { ref } = resolveSecretInputRef({
@@ -101,6 +150,9 @@ async function resolveGatewayPasswordSecretRef(
     defaults: cfg.secrets?.defaults,
   });
   if (!ref) {
+    return cfg;
+  }
+  if (!shouldResolveGatewayPasswordSecretRef({ cfg, env, authOverride })) {
     return cfg;
   }
   const resolved = await resolveSecretRefValues([ref], {
@@ -137,7 +189,7 @@ export async function ensureGatewayStartupAuth(params: {
 }> {
   const env = params.env ?? process.env;
   const persistRequested = params.persist === true;
-  const cfgForAuth = await resolveGatewayPasswordSecretRef(params.cfg, env);
+  const cfgForAuth = await resolveGatewayPasswordSecretRef(params.cfg, env, params.authOverride);
   const resolved = resolveGatewayAuthFromConfig({
     cfg: cfgForAuth,
     env,

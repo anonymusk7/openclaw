@@ -132,6 +132,33 @@ describe("ensureGatewayStartupAuth", () => {
     expect(result.auth.password).toBe("resolved-password");
   });
 
+  it("does not resolve gateway.auth.password SecretRef when token mode is explicit", async () => {
+    const cfg: OpenClawConfig = {
+      gateway: {
+        auth: {
+          mode: "token",
+          token: "configured-token",
+          password: { source: "env", provider: "missing", id: "GW_PASSWORD" },
+        },
+      },
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+    };
+
+    const result = await ensureGatewayStartupAuth({
+      cfg,
+      env: {} as NodeJS.ProcessEnv,
+      persist: true,
+    });
+
+    expect(result.generatedToken).toBeUndefined();
+    expect(result.auth.mode).toBe("token");
+    expect(result.auth.token).toBe("configured-token");
+  });
+
   it("does not generate in trusted-proxy mode", async () => {
     await expectNoTokenGeneration(
       {

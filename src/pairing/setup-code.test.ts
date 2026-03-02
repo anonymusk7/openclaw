@@ -84,6 +84,37 @@ describe("pairing setup code", () => {
     expect(resolved.authLabel).toBe("password");
   });
 
+  it("does not resolve gateway.auth.password SecretRef in token mode", async () => {
+    const resolved = await resolvePairingSetupFromConfig(
+      {
+        gateway: {
+          bind: "custom",
+          customBindHost: "gateway.local",
+          auth: {
+            mode: "token",
+            token: "tok_123",
+            password: { source: "env", provider: "missing", id: "GW_PASSWORD" },
+          },
+        },
+        secrets: {
+          providers: {
+            default: { source: "env" },
+          },
+        },
+      },
+      {
+        env: {},
+      },
+    );
+
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) {
+      throw new Error("expected setup resolution to succeed");
+    }
+    expect(resolved.authLabel).toBe("token");
+    expect(resolved.payload.token).toBe("tok_123");
+  });
+
   it("honors env token override", async () => {
     const resolved = await resolvePairingSetupFromConfig(
       {
