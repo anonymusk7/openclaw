@@ -45,11 +45,11 @@ See [Brave Search setup](/brave-search) and [Perplexity Sonar](/perplexity) for 
 
 If no `provider` is explicitly set, OpenClaw auto-detects which provider to use based on available API keys, checking in this order:
 
-1. **Brave** — `BRAVE_API_KEY` env var or `search.apiKey` config
-2. **Gemini** — `GEMINI_API_KEY` env var or `search.gemini.apiKey` config
-3. **Kimi** — `KIMI_API_KEY` / `MOONSHOT_API_KEY` env var or `search.kimi.apiKey` config
-4. **Perplexity** — `PERPLEXITY_API_KEY` / `OPENROUTER_API_KEY` env var or `search.perplexity.apiKey` config
-5. **Grok** — `XAI_API_KEY` env var or `search.grok.apiKey` config
+1. **Brave** — `BRAVE_API_KEY` env var or `tools.web.search.apiKey` config
+2. **Gemini** — `GEMINI_API_KEY` env var or `tools.web.search.gemini.apiKey` config
+3. **Kimi** — `KIMI_API_KEY` / `MOONSHOT_API_KEY` env var or `tools.web.search.kimi.apiKey` config
+4. **Perplexity** — `PERPLEXITY_API_KEY` / `OPENROUTER_API_KEY` env var or `tools.web.search.perplexity.apiKey` config
+5. **Grok** — `XAI_API_KEY` env var or `tools.web.search.grok.apiKey` config
 
 If no keys are found, it falls back to Brave (you'll get a missing-key error prompting you to configure one).
 

@@ -1322,7 +1322,10 @@
                   "reference/wizard",
                   "reference/token-use",
                   "reference/secretref-credential-surface",
-                  "reference/prompt-caching"
+                  "reference/prompt-caching",
+                  "reference/api-usage-costs",
+                  "reference/transcript-hygiene",
+                  "date-time"
                 ]
               },
               {

@@ -39,12 +39,12 @@ Examples of inactive surfaces:
 - Disabled tool/feature surfaces.
 - Web search provider-specific keys that are not selected by `tools.web.search.provider`.
   In auto mode (provider unset), provider-specific keys are also active for provider auto-detection.
-- `gateway.remote.token` / `gateway.remote.password` SecretRefs are always active when one of these is true:
+- `gateway.remote.token` / `gateway.remote.password` SecretRefs are active (when `gateway.remote.enabled` is not `false`) if one of these is true:
   - `gateway.mode=remote`
   - `gateway.remote.url` is configured
   - `gateway.tailscale.mode` is `serve` or `funnel`
     In local mode without those remote surfaces:
-  - `gateway.remote.token` is active when no env/auth token is configured.
+  - `gateway.remote.token` is active when token auth can win and no env/auth token is configured.
   - `gateway.remote.password` is active only when password auth can win and no env/auth password is configured.
 
 ## Onboarding reference preflight
