@@ -385,7 +385,7 @@ async function resolveGatewayCredentialsWithEnv(
       resolvedConfig.gateway.auth.password = resolvedPassword;
     }
   }
-  const remote = resolvedConfig.gateway?.remote;
+  const remote = context.isRemoteMode ? resolvedConfig.gateway?.remote : undefined;
   const resolvedDefaults = resolvedConfig.secrets?.defaults;
   if (remote) {
     const localToken = trimToUndefined(resolvedConfig.gateway?.auth?.token);

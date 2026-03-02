@@ -825,6 +825,33 @@ describe("callGateway password resolution", () => {
     expect(lastClientOptions?.password).toBeUndefined();
   });
 
+  it("does not resolve remote refs on non-remote gateway calls", async () => {
+    loadConfig.mockReturnValue({
+      gateway: {
+        mode: "local",
+        bind: "loopback",
+        auth: {
+          mode: "none",
+        },
+        remote: {
+          url: "wss://remote.example:18789",
+          token: { source: "env", provider: "default", id: "MISSING_REMOTE_TOKEN" },
+          password: { source: "env", provider: "default", id: "MISSING_REMOTE_PASSWORD" },
+        },
+      },
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+    } as unknown as OpenClawConfig);
+
+    await callGateway({ method: "health" });
+
+    expect(lastClientOptions?.token).toBeUndefined();
+    expect(lastClientOptions?.password).toBeUndefined();
+  });
+
   it.each(explicitAuthCases)("uses explicit $label when url override is set", async (testCase) => {
     process.env[testCase.envKey] = testCase.envValue;
     const auth = { [testCase.authKey]: testCase.configValue } as {
