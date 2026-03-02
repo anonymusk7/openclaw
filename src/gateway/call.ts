@@ -390,11 +390,17 @@ async function resolveGatewayCredentialsWithEnv(
   if (remote) {
     const localToken = trimToUndefined(resolvedConfig.gateway?.auth?.token);
     const localPassword = trimToUndefined(resolvedConfig.gateway?.auth?.password);
+    const passwordCanWinBeforeRemoteTokenResolution = Boolean(
+      envPassword ||
+      localPassword ||
+      trimToUndefined(remote.password) ||
+      hasConfiguredSecretInput(remote.password, resolvedDefaults),
+    );
     const remoteTokenRef = resolveSecretInputRef({
       value: remote.token,
       defaults: resolvedDefaults,
     }).ref;
-    if (!envToken && !localToken && remoteTokenRef) {
+    if (!passwordCanWinBeforeRemoteTokenResolution && !envToken && !localToken && remoteTokenRef) {
       remote.token = await resolveGatewaySecretInputString({
         config: resolvedConfig,
         value: remote.token,

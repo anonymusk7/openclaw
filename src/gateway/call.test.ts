@@ -800,6 +800,31 @@ describe("callGateway password resolution", () => {
     expect(lastClientOptions?.password).toBe("resolved-remote-ref-password");
   });
 
+  it("does not resolve remote token ref when remote password already wins", async () => {
+    loadConfig.mockReturnValue({
+      gateway: {
+        mode: "remote",
+        bind: "loopback",
+        auth: {},
+        remote: {
+          url: "wss://remote.example:18789",
+          token: { source: "env", provider: "default", id: "MISSING_REMOTE_TOKEN" },
+          password: "remote-password",
+        },
+      },
+      secrets: {
+        providers: {
+          default: { source: "env" },
+        },
+      },
+    } as unknown as OpenClawConfig);
+
+    await callGateway({ method: "health" });
+
+    expect(lastClientOptions?.token).toBeUndefined();
+    expect(lastClientOptions?.password).toBe("remote-password");
+  });
+
   it("does not resolve remote password ref when remote token already wins", async () => {
     loadConfig.mockReturnValue({
       gateway: {
