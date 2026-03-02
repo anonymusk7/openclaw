@@ -367,6 +367,8 @@ async function resolveGatewayCredentialsWithEnv(
   const localPasswordCanWinInLocalMode =
     authMode === "password" ||
     (authMode !== "token" && authMode !== "none" && authMode !== "trusted-proxy" && !tokenCanWin);
+  const localTokenCanWinInLocalMode =
+    authMode !== "password" && authMode !== "none" && authMode !== "trusted-proxy";
   const localPasswordCanWinInRemoteMode = !remotePasswordConfigured && !tokenCanWin;
   const shouldResolveLocalPassword =
     Boolean(auth) &&
@@ -443,7 +445,13 @@ async function resolveGatewayCredentialsWithEnv(
       value: localModeRemote.token,
       defaults: resolvedDefaults,
     }).ref;
-    if (!passwordCanWinBeforeRemoteTokenResolution && !envToken && !localToken && remoteTokenRef) {
+    if (
+      localTokenCanWinInLocalMode &&
+      !passwordCanWinBeforeRemoteTokenResolution &&
+      !envToken &&
+      !localToken &&
+      remoteTokenRef
+    ) {
       localModeRemote.token = await resolveGatewaySecretInputString({
         config: resolvedConfig,
         value: localModeRemote.token,

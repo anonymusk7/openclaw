@@ -216,6 +216,8 @@ function collectGatewayAssignments(params: {
   const localTokenConfigured = hasConfiguredSecretInput(auth?.token, params.defaults);
   const localPasswordConfigured = hasConfiguredSecretInput(auth?.password, params.defaults);
   const remoteTokenConfigured = hasConfiguredSecretInput(remote?.token, params.defaults);
+  const localTokenCanWin =
+    authMode !== "password" && authMode !== "none" && authMode !== "trusted-proxy";
   const tokenCanWin = Boolean(envToken || localTokenConfigured || remoteTokenConfigured);
   const passwordCanWin =
     authMode === "password" ||
@@ -245,8 +247,9 @@ function collectGatewayAssignments(params: {
     const tailscaleRemoteExposure = tailscale?.mode === "serve" || tailscale?.mode === "funnel";
     const remoteEnabled = remote.enabled !== false;
     const remoteConfiguredSurface = remoteMode || remoteUrlConfigured || tailscaleRemoteExposure;
+    const remoteTokenFallbackActive = localTokenCanWin && !envToken && !localTokenConfigured;
     const remoteTokenActive =
-      remoteEnabled && (remoteConfiguredSurface || (!envToken && !localTokenConfigured));
+      remoteEnabled && (remoteConfiguredSurface || remoteTokenFallbackActive);
     const remotePasswordActive =
       remoteEnabled &&
       (remoteConfiguredSurface || (!envPassword && !localPasswordConfigured && passwordCanWin));

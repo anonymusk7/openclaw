@@ -703,6 +703,43 @@ describe("secrets runtime snapshot", () => {
     expect(snapshot.warnings.map((warning) => warning.path)).toContain("gateway.auth.password");
   });
 
+  it.each(["none", "trusted-proxy"] as const)(
+    "treats gateway.remote refs as inactive in local mode when auth mode is %s",
+    async (mode) => {
+      const snapshot = await prepareSecretsRuntimeSnapshot({
+        config: asConfig({
+          gateway: {
+            mode: "local",
+            auth: {
+              mode,
+            },
+            remote: {
+              token: { source: "env", provider: "default", id: "MISSING_REMOTE_TOKEN" },
+              password: { source: "env", provider: "default", id: "MISSING_REMOTE_PASSWORD" },
+            },
+          },
+        }),
+        env: {},
+        agentDirs: ["/tmp/openclaw-agent-main"],
+        loadAuthStore: () => ({ version: 1, profiles: {} }),
+      });
+
+      expect(snapshot.config.gateway?.remote?.token).toEqual({
+        source: "env",
+        provider: "default",
+        id: "MISSING_REMOTE_TOKEN",
+      });
+      expect(snapshot.config.gateway?.remote?.password).toEqual({
+        source: "env",
+        provider: "default",
+        id: "MISSING_REMOTE_PASSWORD",
+      });
+      expect(snapshot.warnings.map((warning) => warning.path)).toEqual(
+        expect.arrayContaining(["gateway.remote.token", "gateway.remote.password"]),
+      );
+    },
+  );
+
   it("treats gateway.remote.token ref as active in local mode when no local credentials are configured", async () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
