@@ -2,33 +2,42 @@ import { Command } from "commander";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encodePairingSetupCode } from "../pairing/setup-code.js";
 
-const runtime = {
-  log: vi.fn(),
-  error: vi.fn(),
-  exit: vi.fn(() => {
-    throw new Error("exit");
+const mocks = vi.hoisted(() => ({
+  runtime: {
+    log: vi.fn(),
+    error: vi.fn(),
+    exit: vi.fn(() => {
+      throw new Error("exit");
+    }),
+  },
+  loadConfig: vi.fn(),
+  runCommandWithTimeout: vi.fn(),
+  resolveCommandSecretRefsViaGateway: vi.fn(async ({ config }: { config: unknown }) => ({
+    resolvedConfig: config,
+    diagnostics: [] as string[],
+  })),
+  qrGenerate: vi.fn((_input: unknown, _opts: unknown, cb: (output: string) => void) => {
+    cb("ASCII-QR");
   }),
-};
-
-const loadConfig = vi.fn();
-const runCommandWithTimeout = vi.fn();
-const resolveCommandSecretRefsViaGateway = vi.fn(async ({ config }: { config: unknown }) => ({
-  resolvedConfig: config,
-  diagnostics: [] as string[],
 }));
-const qrGenerate = vi.fn((_input, _opts, cb: (output: string) => void) => {
-  cb("ASCII-QR");
-});
 
-vi.mock("../runtime.js", () => ({ defaultRuntime: runtime }));
-vi.mock("../config/config.js", () => ({ loadConfig }));
-vi.mock("../process/exec.js", () => ({ runCommandWithTimeout }));
-vi.mock("./command-secret-gateway.js", () => ({ resolveCommandSecretRefsViaGateway }));
+vi.mock("../runtime.js", () => ({ defaultRuntime: mocks.runtime }));
+vi.mock("../config/config.js", () => ({ loadConfig: mocks.loadConfig }));
+vi.mock("../process/exec.js", () => ({ runCommandWithTimeout: mocks.runCommandWithTimeout }));
+vi.mock("./command-secret-gateway.js", () => ({
+  resolveCommandSecretRefsViaGateway: mocks.resolveCommandSecretRefsViaGateway,
+}));
 vi.mock("qrcode-terminal", () => ({
   default: {
-    generate: qrGenerate,
+    generate: mocks.qrGenerate,
   },
 }));
+
+const runtime = mocks.runtime;
+const loadConfig = mocks.loadConfig;
+const runCommandWithTimeout = mocks.runCommandWithTimeout;
+const resolveCommandSecretRefsViaGateway = mocks.resolveCommandSecretRefsViaGateway;
+const qrGenerate = mocks.qrGenerate;
 
 const { registerQrCli } = await import("./qr-cli.js");
 
