@@ -482,8 +482,9 @@ function collectIrcAssignments(params: {
       expected: "string",
       defaults: params.defaults,
       context: params.context,
-      active: isBaseFieldActiveForChannelSurface(surface, "nickserv"),
-      inactiveReason: "no enabled account inherits this top-level IRC nickserv config.",
+      active: isBaseFieldActiveForChannelSurface(surface, "nickserv") && isEnabledFlag(nickserv),
+      inactiveReason:
+        "no enabled account inherits this top-level IRC nickserv config or NickServ is disabled.",
       apply: (value) => {
         nickserv.password = value;
       },
@@ -501,8 +502,8 @@ function collectIrcAssignments(params: {
         expected: "string",
         defaults: params.defaults,
         context: params.context,
-        active: enabled,
-        inactiveReason: "IRC account is disabled.",
+        active: enabled && isEnabledFlag(nickserv),
+        inactiveReason: "IRC account is disabled or NickServ is disabled for this account.",
         apply: (value) => {
           nickserv.password = value;
         },

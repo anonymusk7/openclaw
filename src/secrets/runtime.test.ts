@@ -1218,6 +1218,73 @@ describe("secrets runtime snapshot", () => {
     );
   });
 
+  it("treats IRC account nickserv password refs as inactive when nickserv is disabled", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        channels: {
+          irc: {
+            accounts: {
+              work: {
+                enabled: true,
+                nickserv: {
+                  enabled: false,
+                  password: {
+                    source: "env",
+                    provider: "default",
+                    id: "MISSING_IRC_WORK_NICKSERV_PASSWORD",
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+      env: {},
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.channels?.irc?.accounts?.work?.nickserv?.password).toEqual({
+      source: "env",
+      provider: "default",
+      id: "MISSING_IRC_WORK_NICKSERV_PASSWORD",
+    });
+    expect(snapshot.warnings.map((warning) => warning.path)).toContain(
+      "channels.irc.accounts.work.nickserv.password",
+    );
+  });
+
+  it("treats top-level IRC nickserv password refs as inactive when nickserv is disabled", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        channels: {
+          irc: {
+            nickserv: {
+              enabled: false,
+              password: {
+                source: "env",
+                provider: "default",
+                id: "MISSING_IRC_TOPLEVEL_NICKSERV_PASSWORD",
+              },
+            },
+          },
+        },
+      }),
+      env: {},
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.channels?.irc?.nickserv?.password).toEqual({
+      source: "env",
+      provider: "default",
+      id: "MISSING_IRC_TOPLEVEL_NICKSERV_PASSWORD",
+    });
+    expect(snapshot.warnings.map((warning) => warning.path)).toContain(
+      "channels.irc.nickserv.password",
+    );
+  });
+
   it("treats Slack signingSecret refs as inactive when mode is socket", async () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
