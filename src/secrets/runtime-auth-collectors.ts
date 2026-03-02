@@ -27,13 +27,20 @@ function collectApiKeyProfileAssignment(params: {
   defaults: SecretDefaults | undefined;
   context: ResolverContext;
 }): void {
-  const { explicitRef: keyRef, ref: resolvedKeyRef } = resolveSecretInputRef({
+  const {
+    explicitRef: keyRef,
+    inlineRef: inlineKeyRef,
+    ref: resolvedKeyRef,
+  } = resolveSecretInputRef({
     value: params.profile.key,
     refValue: params.profile.keyRef,
     defaults: params.defaults,
   });
   if (!resolvedKeyRef) {
     return;
+  }
+  if (!keyRef && inlineKeyRef) {
+    params.profile.keyRef = inlineKeyRef;
   }
   if (keyRef && isNonEmptyString(params.profile.key)) {
     pushWarning(params.context, {
@@ -59,13 +66,20 @@ function collectTokenProfileAssignment(params: {
   defaults: SecretDefaults | undefined;
   context: ResolverContext;
 }): void {
-  const { explicitRef: tokenRef, ref: resolvedTokenRef } = resolveSecretInputRef({
+  const {
+    explicitRef: tokenRef,
+    inlineRef: inlineTokenRef,
+    ref: resolvedTokenRef,
+  } = resolveSecretInputRef({
     value: params.profile.token,
     refValue: params.profile.tokenRef,
     defaults: params.defaults,
   });
   if (!resolvedTokenRef) {
     return;
+  }
+  if (!tokenRef && inlineTokenRef) {
+    params.profile.tokenRef = inlineTokenRef;
   }
   if (tokenRef && isNonEmptyString(params.profile.token)) {
     pushWarning(params.context, {

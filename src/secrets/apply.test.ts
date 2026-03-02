@@ -117,16 +117,6 @@ async function applyPlanAndReadConfig<T>(
   return JSON.parse(await fs.readFile(fixture.configPath, "utf8")) as T;
 }
 
-async function expectInvalidTargetPath(
-  fixture: ApplyFixture,
-  target: SecretsApplyPlan["targets"][number],
-): Promise<void> {
-  const plan = createPlan({ targets: [target] });
-  await expect(runSecretsApply({ plan, env: fixture.env, write: false })).rejects.toThrow(
-    "Invalid plan target path",
-  );
-}
-
 function createPlan(params: {
   targets: SecretsApplyPlan["targets"];
   options?: SecretsApplyPlan["options"];
@@ -237,11 +227,11 @@ describe("secrets apply", () => {
       },
     };
 
-    const result = await runSecretsApply({ plan, env, write: true });
+    const result = await runSecretsApply({ plan, env: fixture.env, write: true });
     expect(result.changed).toBe(true);
-    expect(result.changedFiles).toContain(authStorePath);
+    expect(result.changedFiles).toContain(fixture.authStorePath);
 
-    const nextAuthStore = JSON.parse(await fs.readFile(authStorePath, "utf8")) as {
+    const nextAuthStore = JSON.parse(await fs.readFile(fixture.authStorePath, "utf8")) as {
       profiles: { "openai:default": { key?: string; keyRef?: unknown } };
     };
     expect(nextAuthStore.profiles["openai:default"].key).toBeUndefined();
@@ -275,8 +265,8 @@ describe("secrets apply", () => {
       },
     };
 
-    await runSecretsApply({ plan, env, write: true });
-    const nextAuthStore = JSON.parse(await fs.readFile(authStorePath, "utf8")) as {
+    await runSecretsApply({ plan, env: fixture.env, write: true });
+    const nextAuthStore = JSON.parse(await fs.readFile(fixture.authStorePath, "utf8")) as {
       profiles: {
         "openai:bot": {
           type: string;
@@ -400,7 +390,7 @@ describe("secrets apply", () => {
 
   it("applies non-legacy target types", async () => {
     await fs.writeFile(
-      configPath,
+      fixture.configPath,
       `${JSON.stringify(
         {
           talk: {
@@ -433,10 +423,10 @@ describe("secrets apply", () => {
       },
     };
 
-    const result = await runSecretsApply({ plan, env, write: true });
+    const result = await runSecretsApply({ plan, env: fixture.env, write: true });
     expect(result.changed).toBe(true);
 
-    const nextConfig = JSON.parse(await fs.readFile(configPath, "utf8")) as {
+    const nextConfig = JSON.parse(await fs.readFile(fixture.configPath, "utf8")) as {
       talk?: { apiKey?: unknown };
     };
     expect(nextConfig.talk?.apiKey).toEqual({
@@ -448,7 +438,7 @@ describe("secrets apply", () => {
 
   it("applies array-indexed targets for agent memory search", async () => {
     await fs.writeFile(
-      configPath,
+      fixture.configPath,
       `${JSON.stringify(
         {
           agents: {
@@ -490,11 +480,11 @@ describe("secrets apply", () => {
       },
     };
 
-    env.MEMORY_REMOTE_API_KEY = "sk-memory-live-env";
-    const result = await runSecretsApply({ plan, env, write: true });
+    fixture.env.MEMORY_REMOTE_API_KEY = "sk-memory-live-env";
+    const result = await runSecretsApply({ plan, env: fixture.env, write: true });
     expect(result.changed).toBe(true);
 
-    const nextConfig = JSON.parse(await fs.readFile(configPath, "utf8")) as {
+    const nextConfig = JSON.parse(await fs.readFile(fixture.configPath, "utf8")) as {
       agents?: {
         list?: Array<{
           memorySearch?: {
@@ -529,7 +519,7 @@ describe("secrets apply", () => {
       ],
     };
 
-    await expect(runSecretsApply({ plan, env, write: false })).rejects.toThrow(
+    await expect(runSecretsApply({ plan, env: fixture.env, write: false })).rejects.toThrow(
       "Invalid plan target path",
     );
   });
@@ -550,7 +540,7 @@ describe("secrets apply", () => {
       ],
     };
 
-    await expect(runSecretsApply({ plan, env, write: false })).rejects.toThrow(
+    await expect(runSecretsApply({ plan, env: fixture.env, write: false })).rejects.toThrow(
       "Invalid plan target path",
     );
   });

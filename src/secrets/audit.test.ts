@@ -195,8 +195,8 @@ describe("secrets audit", () => {
     if (process.platform === "win32") {
       return;
     }
-    const execLogPath = path.join(rootDir, "exec-fail-calls.log");
-    const execScriptPath = path.join(rootDir, "resolver-fail.mjs");
+    const execLogPath = path.join(fixture.rootDir, "exec-fail-calls.log");
+    const execScriptPath = path.join(fixture.rootDir, "resolver-fail.mjs");
     await fs.writeFile(
       execScriptPath,
       [
@@ -209,7 +209,7 @@ describe("secrets audit", () => {
     );
 
     await fs.writeFile(
-      configPath,
+      fixture.configPath,
       `${JSON.stringify(
         {
           secrets: {
@@ -244,10 +244,10 @@ describe("secrets audit", () => {
       )}\n`,
       "utf8",
     );
-    await fs.rm(authStorePath, { force: true });
-    await fs.writeFile(envPath, "", "utf8");
+    await fs.rm(fixture.authStorePath, { force: true });
+    await fs.writeFile(fixture.envPath, "", "utf8");
 
-    const report = await runSecretsAudit({ env });
+    const report = await runSecretsAudit({ env: fixture.env });
     expect(report.summary.unresolvedRefCount).toBeGreaterThanOrEqual(2);
 
     const callLog = await fs.readFile(execLogPath, "utf8");
