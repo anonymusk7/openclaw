@@ -140,6 +140,56 @@ describe("resolveGatewayCredentialsFromConfig", () => {
     ).toThrow("gateway.auth.password");
   });
 
+  it("ignores unresolved local password ref when local auth mode is none", () => {
+    const resolved = resolveGatewayCredentialsFromConfig({
+      cfg: {
+        gateway: {
+          mode: "local",
+          auth: {
+            mode: "none",
+            password: { source: "env", provider: "default", id: "MISSING_GATEWAY_PASSWORD" },
+          },
+        },
+        secrets: {
+          providers: {
+            default: { source: "env" },
+          },
+        },
+      } as unknown as OpenClawConfig,
+      env: {} as NodeJS.ProcessEnv,
+      includeLegacyEnv: false,
+    });
+    expect(resolved).toEqual({
+      token: undefined,
+      password: undefined,
+    });
+  });
+
+  it("ignores unresolved local password ref when local auth mode is trusted-proxy", () => {
+    const resolved = resolveGatewayCredentialsFromConfig({
+      cfg: {
+        gateway: {
+          mode: "local",
+          auth: {
+            mode: "trusted-proxy",
+            password: { source: "env", provider: "default", id: "MISSING_GATEWAY_PASSWORD" },
+          },
+        },
+        secrets: {
+          providers: {
+            default: { source: "env" },
+          },
+        },
+      } as unknown as OpenClawConfig,
+      env: {} as NodeJS.ProcessEnv,
+      includeLegacyEnv: false,
+    });
+    expect(resolved).toEqual({
+      token: undefined,
+      password: undefined,
+    });
+  });
+
   it("keeps local credentials ahead of remote fallback in local mode", () => {
     const resolved = resolveGatewayCredentialsFromConfig({
       cfg: cfg({
