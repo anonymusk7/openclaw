@@ -45,6 +45,7 @@ type CallGatewayBaseOptions = {
   instanceId?: string;
   minProtocol?: number;
   maxProtocol?: number;
+  requiredMethods?: string[];
   /**
    * Overrides the config path shown in connection error details.
    * Does not affect config loading; callers still control auth via opts.token/password/env/config.
@@ -561,6 +562,35 @@ function formatGatewayTimeoutError(
   return `gateway timeout after ${timeoutMs}ms\n${connectionDetails.message}`;
 }
 
+function ensureGatewaySupportsRequiredMethods(params: {
+  requiredMethods: string[] | undefined;
+  methods: string[] | undefined;
+  attemptedMethod: string;
+}): void {
+  const requiredMethods = Array.isArray(params.requiredMethods)
+    ? params.requiredMethods.map((entry) => entry.trim()).filter((entry) => entry.length > 0)
+    : [];
+  if (requiredMethods.length === 0) {
+    return;
+  }
+  const supportedMethods = new Set(
+    (Array.isArray(params.methods) ? params.methods : [])
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0),
+  );
+  for (const method of requiredMethods) {
+    if (supportedMethods.has(method)) {
+      continue;
+    }
+    throw new Error(
+      [
+        `active gateway does not support required method "${method}" for "${params.attemptedMethod}".`,
+        "Update the gateway or run without SecretRefs.",
+      ].join(" "),
+    );
+  }
+}
+
 async function executeGatewayRequestWithScopes<T>(params: {
   opts: CallGatewayBaseOptions;
   scopes: OperatorScope[];
@@ -606,8 +636,13 @@ async function executeGatewayRequestWithScopes<T>(params: {
       deviceIdentity: loadOrCreateDeviceIdentity(),
       minProtocol: opts.minProtocol ?? PROTOCOL_VERSION,
       maxProtocol: opts.maxProtocol ?? PROTOCOL_VERSION,
-      onHelloOk: async () => {
+      onHelloOk: async (hello) => {
         try {
+          ensureGatewaySupportsRequiredMethods({
+            requiredMethods: opts.requiredMethods,
+            methods: hello.features?.methods,
+            attemptedMethod: opts.method,
+          });
           const result = await client.request<T>(opts.method, opts.params, {
             expectFinal: opts.expectFinal,
           });

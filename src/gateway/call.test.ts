@@ -14,13 +14,14 @@ let lastClientOptions: {
   password?: string;
   tlsFingerprint?: string;
   scopes?: string[];
-  onHelloOk?: () => void | Promise<void>;
+  onHelloOk?: (hello: { features?: { methods?: string[] } }) => void | Promise<void>;
   onClose?: (code: number, reason: string) => void;
 } | null = null;
 type StartMode = "hello" | "close" | "silent";
 let startMode: StartMode = "hello";
 let closeCode = 1006;
 let closeReason = "";
+let helloMethods: string[] | undefined = ["health", "secrets.resolve"];
 
 vi.mock("./client.js", () => ({
   describeGatewayCloseCode: (code: number) => {
@@ -38,7 +39,7 @@ vi.mock("./client.js", () => ({
       token?: string;
       password?: string;
       scopes?: string[];
-      onHelloOk?: () => void | Promise<void>;
+      onHelloOk?: (hello: { features?: { methods?: string[] } }) => void | Promise<void>;
       onClose?: (code: number, reason: string) => void;
     }) {
       lastClientOptions = opts;
@@ -48,7 +49,11 @@ vi.mock("./client.js", () => ({
     }
     start() {
       if (startMode === "hello") {
-        void lastClientOptions?.onHelloOk?.();
+        void lastClientOptions?.onHelloOk?.({
+          features: {
+            methods: helloMethods,
+          },
+        });
       } else if (startMode === "close") {
         lastClientOptions?.onClose?.(closeCode, closeReason);
       }
@@ -69,6 +74,7 @@ function resetGatewayCallMocks() {
   startMode = "hello";
   closeCode = 1006;
   closeReason = "";
+  helloMethods = ["health", "secrets.resolve"];
 }
 
 function setGatewayNetworkDefaults(port = 18789) {
@@ -518,6 +524,17 @@ describe("callGateway error details", () => {
         timeoutMs: 10,
       }),
     ).rejects.toThrow("gateway remote mode misconfigured");
+  });
+
+  it("fails before request when a required gateway method is missing", async () => {
+    setLocalLoopbackGatewayConfig();
+    helloMethods = ["health"];
+    await expect(
+      callGateway({
+        method: "secrets.resolve",
+        requiredMethods: ["secrets.resolve"],
+      }),
+    ).rejects.toThrow(/does not support required method "secrets\.resolve"/i);
   });
 });
 

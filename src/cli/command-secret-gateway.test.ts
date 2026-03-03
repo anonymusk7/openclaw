@@ -79,6 +79,7 @@ describe("resolveCommandSecretRefsViaGateway", () => {
     expect(callGateway).toHaveBeenCalledWith(
       expect.objectContaining({
         method: "secrets.resolve",
+        requiredMethods: ["secrets.resolve"],
         params: {
           commandName: "memory status",
           targetIds: ["talk.apiKey"],
@@ -105,6 +106,25 @@ describe("resolveCommandSecretRefsViaGateway", () => {
 
   it("returns a version-skew hint when gateway does not support secrets.resolve", async () => {
     callGateway.mockRejectedValueOnce(new Error("unknown method: secrets.resolve"));
+    await expect(
+      resolveCommandSecretRefsViaGateway({
+        config: {
+          talk: {
+            apiKey: { source: "env", provider: "default", id: "TALK_API_KEY" },
+          },
+        } as OpenClawConfig,
+        commandName: "memory status",
+        targetIds: new Set(["talk.apiKey"]),
+      }),
+    ).rejects.toThrow(/does not support secrets\.resolve/i);
+  });
+
+  it("returns a version-skew hint when required-method capability check fails", async () => {
+    callGateway.mockRejectedValueOnce(
+      new Error(
+        'active gateway does not support required method "secrets.resolve" for "secrets.resolve".',
+      ),
+    );
     await expect(
       resolveCommandSecretRefsViaGateway({
         config: {

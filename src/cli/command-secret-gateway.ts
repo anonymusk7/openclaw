@@ -140,6 +140,7 @@ function isUnsupportedSecretsResolveError(err: unknown): boolean {
     return false;
   }
   return (
+    message.includes("does not support required method") ||
     message.includes("unknown method") ||
     message.includes("method not found") ||
     message.includes("invalid request")
@@ -173,6 +174,7 @@ export async function resolveCommandSecretRefsViaGateway(params: {
   try {
     payload = await callGateway<GatewaySecretsResolveResult>({
       method: "secrets.resolve",
+      requiredMethods: ["secrets.resolve"],
       params: {
         commandName: params.commandName,
         targetIds: [...params.targetIds],
