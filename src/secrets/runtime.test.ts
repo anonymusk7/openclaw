@@ -843,6 +843,62 @@ describe("secrets runtime snapshot", () => {
     );
   });
 
+  it("treats top-level Zalo botToken refs as active for non-default accounts without overrides", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        channels: {
+          zalo: {
+            botToken: { source: "env", provider: "default", id: "ZALO_TOP_LEVEL_TOKEN" },
+            accounts: {
+              work: {
+                enabled: true,
+              },
+            },
+          },
+        },
+      }),
+      env: {
+        ZALO_TOP_LEVEL_TOKEN: "resolved-zalo-top-level-token",
+      },
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.channels?.zalo?.botToken).toBe("resolved-zalo-top-level-token");
+    expect(snapshot.warnings.map((warning) => warning.path)).not.toContain(
+      "channels.zalo.botToken",
+    );
+  });
+
+  it("treats channels.zalo.accounts.default.botToken refs as active", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        channels: {
+          zalo: {
+            accounts: {
+              default: {
+                enabled: true,
+                botToken: { source: "env", provider: "default", id: "ZALO_DEFAULT_TOKEN" },
+              },
+            },
+          },
+        },
+      }),
+      env: {
+        ZALO_DEFAULT_TOKEN: "resolved-zalo-default-token",
+      },
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.channels?.zalo?.accounts?.default?.botToken).toBe(
+      "resolved-zalo-default-token",
+    );
+    expect(snapshot.warnings.map((warning) => warning.path)).not.toContain(
+      "channels.zalo.accounts.default.botToken",
+    );
+  });
+
   it("treats top-level Nextcloud Talk botSecret and apiPassword refs as active when file paths are configured", async () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
@@ -1002,6 +1058,32 @@ describe("secrets runtime snapshot", () => {
               },
               accounts: {
                 work: {
+                  enabled: true,
+                },
+              },
+            },
+          },
+        }),
+        env: {},
+        agentDirs: ["/tmp/openclaw-agent-main"],
+        loadAuthStore: () => ({ version: 1, profiles: {} }),
+      }),
+    ).rejects.toThrow('Environment variable "MISSING_ENABLED_TELEGRAM_TOKEN" is missing or empty.');
+  });
+
+  it("fails when default Telegram account can inherit an unresolved top-level token ref", async () => {
+    await expect(
+      prepareSecretsRuntimeSnapshot({
+        config: asConfig({
+          channels: {
+            telegram: {
+              botToken: {
+                source: "env",
+                provider: "default",
+                id: "MISSING_ENABLED_TELEGRAM_TOKEN",
+              },
+              accounts: {
+                default: {
                   enabled: true,
                 },
               },
@@ -1406,6 +1488,64 @@ describe("secrets runtime snapshot", () => {
     expect(snapshot.warnings.map((warning) => warning.path)).toContain(
       "channels.googlechat.serviceAccount",
     );
+  });
+
+  it("fails when non-default Discord account inherits an unresolved top-level token ref", async () => {
+    await expect(
+      prepareSecretsRuntimeSnapshot({
+        config: asConfig({
+          channels: {
+            discord: {
+              token: {
+                source: "env",
+                provider: "default",
+                id: "MISSING_DISCORD_BASE_TOKEN",
+              },
+              accounts: {
+                work: {
+                  enabled: true,
+                },
+              },
+            },
+          },
+        }),
+        env: {},
+        agentDirs: ["/tmp/openclaw-agent-main"],
+        loadAuthStore: () => ({ version: 1, profiles: {} }),
+      }),
+    ).rejects.toThrow('Environment variable "MISSING_DISCORD_BASE_TOKEN" is missing or empty.');
+  });
+
+  it("treats top-level Discord token refs as inactive when account token is explicitly blank", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        channels: {
+          discord: {
+            token: {
+              source: "env",
+              provider: "default",
+              id: "MISSING_DISCORD_DEFAULT_TOKEN",
+            },
+            accounts: {
+              default: {
+                enabled: true,
+                token: "",
+              },
+            },
+          },
+        },
+      }),
+      env: {},
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.channels?.discord?.token).toEqual({
+      source: "env",
+      provider: "default",
+      id: "MISSING_DISCORD_DEFAULT_TOKEN",
+    });
+    expect(snapshot.warnings.map((warning) => warning.path)).toContain("channels.discord.token");
   });
 
   it("treats Discord PluralKit token refs as inactive when PluralKit is disabled", async () => {

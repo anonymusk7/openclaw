@@ -23,26 +23,43 @@ export function resolveDiscordToken(
 ): DiscordTokenResolution {
   const accountId = normalizeAccountId(opts.accountId);
   const discordCfg = cfg?.channels?.discord;
-  const accountCfg =
-    accountId !== DEFAULT_ACCOUNT_ID
-      ? discordCfg?.accounts?.[accountId]
-      : discordCfg?.accounts?.[DEFAULT_ACCOUNT_ID];
+  const resolveAccountCfg = (id: string) => {
+    const accounts = discordCfg?.accounts;
+    if (!accounts || typeof accounts !== "object" || Array.isArray(accounts)) {
+      return undefined;
+    }
+    const direct = accounts[id];
+    if (direct) {
+      return direct;
+    }
+    const matchKey = Object.keys(accounts).find((key) => normalizeAccountId(key) === id);
+    return matchKey ? accounts[matchKey] : undefined;
+  };
+  const accountCfg = resolveAccountCfg(accountId);
+  const hasAccountToken = Boolean(
+    accountCfg &&
+    Object.prototype.hasOwnProperty.call(accountCfg as Record<string, unknown>, "token"),
+  );
   const accountToken = normalizeDiscordToken(
-    accountCfg?.token ?? undefined,
+    (accountCfg as { token?: unknown } | undefined)?.token ?? undefined,
     `channels.discord.accounts.${accountId}.token`,
   );
   if (accountToken) {
     return { token: accountToken, source: "config" };
   }
+  if (hasAccountToken) {
+    return { token: "", source: "none" };
+  }
 
-  const allowEnv = accountId === DEFAULT_ACCOUNT_ID;
-  const configToken = allowEnv
-    ? normalizeDiscordToken(discordCfg?.token ?? undefined, "channels.discord.token")
-    : undefined;
+  const configToken = normalizeDiscordToken(
+    discordCfg?.token ?? undefined,
+    "channels.discord.token",
+  );
   if (configToken) {
     return { token: configToken, source: "config" };
   }
 
+  const allowEnv = accountId === DEFAULT_ACCOUNT_ID;
   const envToken = allowEnv
     ? normalizeDiscordToken(opts.envToken ?? process.env.DISCORD_BOT_TOKEN, "DISCORD_BOT_TOKEN")
     : undefined;

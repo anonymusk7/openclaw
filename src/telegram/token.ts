@@ -76,7 +76,7 @@ export function resolveTelegramToken(
 
   const allowEnv = accountId === DEFAULT_ACCOUNT_ID;
   const tokenFile = telegramCfg?.tokenFile?.trim();
-  if (tokenFile && allowEnv) {
+  if (tokenFile) {
     if (!fs.existsSync(tokenFile)) {
       opts.logMissingFile?.(`channels.telegram.tokenFile not found: ${tokenFile}`);
       return { token: "", source: "none" };
@@ -96,7 +96,7 @@ export function resolveTelegramToken(
     value: telegramCfg?.botToken,
     path: "channels.telegram.botToken",
   });
-  if (configToken && allowEnv) {
+  if (configToken) {
     return { token: configToken, source: "config" };
   }
 
