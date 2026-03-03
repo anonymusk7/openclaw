@@ -1,6 +1,6 @@
 import type { OpenClawConfig } from "../config/config.js";
-import { hasConfiguredSecretInput } from "../config/types.secrets.js";
 import { collectTtsApiKeyAssignments } from "./runtime-config-collectors-tts.js";
+import { evaluateGatewayAuthSurfaceStates } from "./runtime-gateway-auth-surfaces.js";
 import {
   collectSecretInputAssignment,
   type ResolverContext,
@@ -196,32 +196,11 @@ function collectGatewayAssignments(params: {
   }
   const auth = isRecord(gateway.auth) ? gateway.auth : undefined;
   const remote = isRecord(gateway.remote) ? gateway.remote : undefined;
-  const envToken =
-    typeof params.context.env.OPENCLAW_GATEWAY_TOKEN === "string" &&
-    params.context.env.OPENCLAW_GATEWAY_TOKEN.trim().length > 0
-      ? params.context.env.OPENCLAW_GATEWAY_TOKEN.trim()
-      : typeof params.context.env.CLAWDBOT_GATEWAY_TOKEN === "string" &&
-          params.context.env.CLAWDBOT_GATEWAY_TOKEN.trim().length > 0
-        ? params.context.env.CLAWDBOT_GATEWAY_TOKEN.trim()
-        : undefined;
-  const envPassword =
-    typeof params.context.env.OPENCLAW_GATEWAY_PASSWORD === "string" &&
-    params.context.env.OPENCLAW_GATEWAY_PASSWORD.trim().length > 0
-      ? params.context.env.OPENCLAW_GATEWAY_PASSWORD.trim()
-      : typeof params.context.env.CLAWDBOT_GATEWAY_PASSWORD === "string" &&
-          params.context.env.CLAWDBOT_GATEWAY_PASSWORD.trim().length > 0
-        ? params.context.env.CLAWDBOT_GATEWAY_PASSWORD.trim()
-        : undefined;
-  const authMode = auth && typeof auth.mode === "string" ? auth.mode : undefined;
-  const localTokenConfigured = hasConfiguredSecretInput(auth?.token, params.defaults);
-  const localPasswordConfigured = hasConfiguredSecretInput(auth?.password, params.defaults);
-  const remoteTokenConfigured = hasConfiguredSecretInput(remote?.token, params.defaults);
-  const localTokenCanWin =
-    authMode !== "password" && authMode !== "none" && authMode !== "trusted-proxy";
-  const tokenCanWin = Boolean(envToken || localTokenConfigured || remoteTokenConfigured);
-  const passwordCanWin =
-    authMode === "password" ||
-    (authMode !== "token" && authMode !== "none" && authMode !== "trusted-proxy" && !tokenCanWin);
+  const gatewaySurfaceStates = evaluateGatewayAuthSurfaceStates({
+    config: params.config,
+    env: params.context.env,
+    defaults: params.defaults,
+  });
   if (auth) {
     collectSecretInputAssignment({
       value: auth.password,
@@ -229,40 +208,22 @@ function collectGatewayAssignments(params: {
       expected: "string",
       defaults: params.defaults,
       context: params.context,
-      active: passwordCanWin,
-      inactiveReason:
-        'gateway.auth.password is inactive unless password auth can win (gateway.auth.mode="password", or mode is unset with no token configured from auth/remote/env).',
+      active: gatewaySurfaceStates["gateway.auth.password"].active,
+      inactiveReason: gatewaySurfaceStates["gateway.auth.password"].reason,
       apply: (value) => {
         auth.password = value;
       },
     });
   }
   if (remote) {
-    const remoteMode = gateway.mode === "remote";
-    const remoteUrlConfigured = typeof remote.url === "string" && remote.url.trim().length > 0;
-    const tailscale =
-      isRecord(gateway.tailscale) && typeof gateway.tailscale.mode === "string"
-        ? gateway.tailscale
-        : undefined;
-    const tailscaleRemoteExposure = tailscale?.mode === "serve" || tailscale?.mode === "funnel";
-    const remoteEnabled = remote.enabled !== false;
-    const remoteConfiguredSurface = remoteMode || remoteUrlConfigured || tailscaleRemoteExposure;
-    const remoteTokenFallbackActive = localTokenCanWin && !envToken && !localTokenConfigured;
-    const remoteTokenActive =
-      remoteEnabled && (remoteConfiguredSurface || remoteTokenFallbackActive);
-    const remotePasswordActive =
-      remoteEnabled &&
-      (remoteConfiguredSurface || (!envPassword && !localPasswordConfigured && passwordCanWin));
     collectSecretInputAssignment({
       value: remote.token,
       path: "gateway.remote.token",
       expected: "string",
       defaults: params.defaults,
       context: params.context,
-      active: remoteTokenActive,
-      inactiveReason: !remoteEnabled
-        ? "gateway.remote is disabled."
-        : "gateway.remote.token is inactive unless remote mode/url/tailscale is active or local auth has no env/auth token configured.",
+      active: gatewaySurfaceStates["gateway.remote.token"].active,
+      inactiveReason: gatewaySurfaceStates["gateway.remote.token"].reason,
       apply: (value) => {
         remote.token = value;
       },
@@ -273,10 +234,8 @@ function collectGatewayAssignments(params: {
       expected: "string",
       defaults: params.defaults,
       context: params.context,
-      active: remotePasswordActive,
-      inactiveReason: !remoteEnabled
-        ? "gateway.remote is disabled."
-        : "gateway.remote.password is inactive unless remote mode/url/tailscale is active or local auth password can win with no env/auth password configured.",
+      active: gatewaySurfaceStates["gateway.remote.password"].active,
+      inactiveReason: gatewaySurfaceStates["gateway.remote.password"].reason,
       apply: (value) => {
         remote.password = value;
       },

@@ -47,6 +47,18 @@ Examples of inactive surfaces:
   - `gateway.remote.token` is active when token auth can win and no env/auth token is configured.
   - `gateway.remote.password` is active only when password auth can win and no env/auth password is configured.
 
+## Gateway auth surface diagnostics
+
+When a SecretRef is configured on `gateway.auth.password`, `gateway.remote.token`, or
+`gateway.remote.password`, gateway startup/reload logs the surface state explicitly:
+
+- `active`: the SecretRef is part of the effective auth surface and must resolve.
+- `inactive`: the SecretRef is ignored for this runtime because another auth surface wins, or
+  because remote auth is disabled/not active.
+
+These entries are logged with `SECRETS_GATEWAY_AUTH_SURFACE` and include the reason used by the
+active-surface policy, so you can see why a credential was treated as active or inactive.
+
 ## Onboarding reference preflight
 
 When onboarding runs in interactive mode and you choose SecretRef storage, OpenClaw runs preflight validation before saving:
